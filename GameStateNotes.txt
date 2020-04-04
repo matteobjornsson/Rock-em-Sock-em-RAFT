@@ -1,0 +1,17 @@
+
+game_state = {
+	'red_punch_L' 	: False,
+	'red_punch_R' 	: False,
+	'red_block_L' 	: False,
+	'red_block_R' 	: False,
+	'red_lock'	  	: False,
+
+	'blue_punch_L' 	: False,
+	'blue_punch_R' 	: False,
+	'blue_block_L' 	: False,
+	'blue_block_R' 	: False,
+	'blue_lock'	   	: False,
+
+	'red_win'		: False,
+	'blue_win'		: False
+}

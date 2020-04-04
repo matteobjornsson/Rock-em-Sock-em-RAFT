@@ -1,0 +1,11 @@
+queue URL: 'https://sqs.us-east-1.amazonaws.com/622058021374/'
+append the following for full queue url: 
+
+0.fifo
+1.fifo
+2.fifo
+3.fifo
+4.fifo
+leader.fifo
+client-blue.fifo
+client-red.fifo
