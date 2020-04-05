@@ -220,7 +220,6 @@ class Replica:
 
 		return message
 
-
 	def send_heartbeat(self):
 		heartbeat = self.make_message('heartbeat')
 		for peer in self.peers:
