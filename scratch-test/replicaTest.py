@@ -1,3 +1,5 @@
+import sys
+sys.path.append('../code')
 from ElectionTimer import Election_Timer
 from Heartbeat import Heartbeat
 from Messenger import Messenger
