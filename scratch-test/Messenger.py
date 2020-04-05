@@ -59,15 +59,7 @@ class Messenger:
             )
             print('\n',self.id,' Received and deleted message : \n\"{}\"'.format(message))
 
-            message_type = message['messageType']
-            if message_type == 'AppendEntriesRPC':
-                self.target.receive_append_entries_request(message)
-            elif message_type == 'AppendReply':
-                self.target.receive_append_entries_reply(message)
-            elif message_type == 'RequestVotesRPC':
-                self.target.receive_vote_request(message)
-            elif message_type == 'VoteReply':
-                self.target.receive_vote_reply(message)
+            self.target.handle_incoming_message(message)
 
     def send(self, message: dict, destination: str):
         '''

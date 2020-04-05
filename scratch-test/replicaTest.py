@@ -76,6 +76,17 @@ class Replica:
 
 # Process incoming messages:
 #################################################################
+	def handle_incoming_message(self, message: dict):
+		message_type = message['messageType']
+		if message_type == 'AppendEntriesRPC':
+			self.receive_append_entries_request(message)
+		elif message_type == 'AppendReply':
+			self.receive_append_entries_reply(message)
+		elif message_type == 'RequestVotesRPC':
+			self.receive_vote_request(message)
+		elif message_type == 'VoteReply':
+			self.receive_vote_reply(message)
+
 
 	def receive_append_entries_request(self, message: dict):
 		leader = message['leaderID']['value']
