@@ -1,5 +1,5 @@
 import unittest, time
-from Robot.robot_logic import Robot
+from Robot.robot_logic import *
 
 
 class TestRobotMethods(unittest.TestCase):
@@ -32,6 +32,12 @@ class TestRobotMethods(unittest.TestCase):
         self.robot.block_with_left()
         self.assertEqual(self.robot.state, "block_left", "robot state was not adjusted")
 
+    def test_punch_block(self):
+        self.robot.punch_with_left()
+        with self.assertRaises(RobotBlockedError):
+            self.robot.punch_with_right()
+        self.assertEqual(self.robot.state, "punch_left", "robot state was incorrectly adjusted")
+
 
 def suite():
     suite = unittest.TestSuite()
@@ -39,6 +45,7 @@ def suite():
     suite.addTest(TestRobotMethods('test_punch_left'))
     suite.addTest(TestRobotMethods('test_block_right'))
     suite.addTest(TestRobotMethods('test_block_left'))
+    suite.addTest(TestRobotMethods('test_punch_block'))
     return suite
 
 

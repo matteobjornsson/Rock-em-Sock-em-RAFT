@@ -1,10 +1,14 @@
 import threading, time
 
-"""
-
-"""
+class RobotBlockedError(ValueError):
+    """Raise error when robot is blocked from punching"""
+    def __init__(self, message):
+        self.message = message
 
 class Robot:
+    """
+
+    """
     def __init__(self, color):
         self.color = color
         self.state = ''
@@ -26,7 +30,7 @@ class Robot:
             self.blocked = True
             self.start_timer_secs(1.0)
         else:
-            print("blocked from punching")
+            raise RobotBlockedError("Robot is blocked from punching.")
 
     def punch_with_right(self):
         if not self.blocked:
@@ -34,7 +38,7 @@ class Robot:
             self.blocked = True
             self.start_timer_secs(1.0)
         else:
-            print("blocked from punching")
+            raise RobotBlockedError("Robot is blocked from punching.")
 
     def punch_failed(self):
         if self.blocked:
