@@ -20,9 +20,9 @@ class Node:
         self.message_queue = message_queue_URLs[self.id]
 
         # purge the associated queue to make sure it is empty when node is initialized
-        response = self.sqs.purge_queue(
-            QueueUrl=self.message_queue
-        )
+        #response = self.sqs.purge_queue(
+        #    QueueUrl=self.message_queue
+        #)
 
     '''
     send() and receive() methods below have been adapted from the AWS python SDK
@@ -75,7 +75,9 @@ class Node:
             return
 
         messageID = response['Messages'][0]['MessageId']
-        message = response['Messages'][0]['Body']
+        message = response['Messages'][0]
+        print(message)
+        message_body = response['Messages'][0]['Body']
 
         # this receipt handle is required to delete the  message from queue
         receipt_handle = response['Messages'][0]['ReceiptHandle']
@@ -86,7 +88,7 @@ class Node:
             ReceiptHandle=receipt_handle
         )
     
-        print('Received and deleted message {}: \n\"{}\"'.format(messageID, message))
+        print('Received and deleted message {}: \n\"{}\"'.format(messageID, message_body))
 
 #############################
 #   Methods for testing:    #
