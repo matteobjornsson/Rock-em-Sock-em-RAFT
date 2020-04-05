@@ -29,8 +29,10 @@ class Heartbeat:
         timeout = self.new_timeout()
         #start the timer
         start = clock()
+        count = 0
         while self.running:
             while not self.stop:
+                count+=1
                 if self.restart:
                     timeout = self.new_timeout()
                     start = clock()
@@ -43,4 +45,6 @@ class Heartbeat:
                     self.restart = True
                     break
                 else:
-                    print('Heartbeat Timer: ', timeout-elapsed_time, end = '\r')  
+                    if count > 100000:  
+                        print('Heartbeat Timer: ', timeout-elapsed_time)  
+                        count = 0
