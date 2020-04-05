@@ -6,10 +6,10 @@ class Heartbeat:
 
     def __init__(self, duration: float, target):
         self.target = target
-        self.duration = duration
+        self.duration = duration/2
         self.running = True
         self.restart = False
-        self.stop = False
+        self.stop = True
 
     def kill_thread(self):
         self.running = False
@@ -40,7 +40,7 @@ class Heartbeat:
                 if elapsed_time > timeout:
                     print('Sending Heartbeat ........       ')
                     self.target.send_heartbeat()
-                    self.restart_timer()
+                    self.restart = True
                     break
                 else:
                     print('Heartbeat Timer: ', timeout-elapsed_time, end = '\r')  
