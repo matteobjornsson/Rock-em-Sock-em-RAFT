@@ -2,19 +2,19 @@ from time import sleep, clock
 from threading import Thread, Timer
 import random
 
-class Election_Timer:
+class Heartbeat:
 
     def __init__(self, duration: float, target):
         self.target = target
-        self.duration = duration
+        self.duration = duration/2
         self.running = True
         self.restart = False
-        self.stop = False
+        self.stop = True
 
     def kill_thread(self):
         self.running = False
 
-    def stop(self):
+    def stop_heartbeat(self):
         self.stop = True
 
     def restart_timer(self):
@@ -29,10 +29,8 @@ class Election_Timer:
         timeout = self.new_timeout()
         #start the timer
         start = clock()
-        count = 0
         while self.running:
             while not self.stop:
-                count += 1
                 if self.restart:
                     timeout = self.new_timeout()
                     start = clock()
@@ -40,11 +38,9 @@ class Election_Timer:
 
                 elapsed_time = clock() - start
                 if elapsed_time > timeout:
-                    print('Countodwn elapsed ', timeout, ',', self.target.id, ' Starting Election       ')
-                    self.target.startElection()
-                    self.restart_timer()
+                    print('Sending Heartbeat ........       ')
+                    self.target.send_heartbeat()
+                    self.restart = True
                     break
                 else:
-                    if count > 500000: 
-                        print('Election Timer: ', timeout-elapsed_time)  
-                        count =0
+                    print('Heartbeat Timer: ', timeout-elapsed_time, end = '\r')  

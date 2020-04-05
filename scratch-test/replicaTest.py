@@ -61,7 +61,7 @@ class Replica:
 	def set_state_to_leader(self):
 		print('\n', self.id, ' Set state to leader')
 		self.election_state = 'leader'
-		self.election_timer.stop()
+		self.election_timer.stop_timer()
 		self.vote_count = 0
 		self.voted_for = None
 		self.heartbeat.restart_timer()
