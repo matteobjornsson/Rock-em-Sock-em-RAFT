@@ -22,7 +22,7 @@ class Replica:
 		self.election_state = 'follower'
 		self.timer_length = 4
 		self.current_term = 0
-		self.voted_for = None
+		self.voted_for = 'Null'
 		self.vote_count = 0
 
 
@@ -57,7 +57,7 @@ class Replica:
 		self.current_term = term
 		self.election_timer.restart_timer()
 		self.vote_count = 0
-		self.voted_for = None
+		self.voted_for = 'Null'
 		self.heartbeat.stop_heartbeat()
 
 	def set_state_to_leader(self):
@@ -65,11 +65,12 @@ class Replica:
 		self.election_state = 'leader'
 		self.election_timer.stop_timer()
 		self.vote_count = 0
-		self.voted_for = None
+		self.voted_for = 'Null'
 		self.heartbeat.restart_timer()
 
 	def set_state_to_candidate(self):
 		self.current_term += 1
+		self.voted_for = self.id
 		if self.election_state != 'candidate':
 			print('\n', self.id, ' set state to candidate')
 			self.election_state = 'candidate'
@@ -80,6 +81,7 @@ class Replica:
 #################################################################
 	def handle_incoming_message(self, message: dict):
 		message_type = message['messageType']
+		print('\n********* You Have Passed A message Back to replica: {} *****\n'.format(message_type))
 		if message_type == 'AppendEntriesRPC':
 			self.receive_append_entries_request(message)
 		elif message_type == 'AppendReply':
@@ -91,9 +93,10 @@ class Replica:
 
 
 	def receive_append_entries_request(self, message: dict):
-		leader = message['leaderID']['value']
-		print('\n', self.id, ' received append entry request: \n', message, '\nfrom ', leader)
-		incoming_term = int(message['term']['value'])
+		leader = message['leaderID']
+		incoming_term = int(message['term'])
+		print('\n', self.id, ' received append entry request from ', leader, ': \n',  message)
+	
 		if incoming_term >= self.current_term:
 			print('\n', self.id, ' greater term detected, reverting to follower')
 			self.set_state_to_follower(incoming_term)
@@ -105,27 +108,30 @@ class Replica:
 
 
 	def receive_vote_request(self, message: dict):
-		candidate = message['candidateID']['value']
+		candidate = message['candidateID']
+		incoming_term = int(message['term'])
 		print('\n', self.id, ' received vote request from ', candidate, ': \n', message)
-		incoming_term = int(message['term']['value'])
+		
 		if incoming_term >= self.current_term:
 			self.set_state_to_follower(incoming_term)
 			print('\n', self.id, ' greater term detected, reverting to follower')
 
-		candidate = message['candidateID']['value']
-		if self.voted_for == None or self.voted_for == candidate:
-			self.voted_for == candidate
-			print('\n', self.id, ' voted for ', candidate)
+		if self.voted_for == 'Null':
+			self.voted_for = candidate
+			print('\n', self.id, ' voted for ', self.voted_for)
+
 		reply = self.make_message('reply to vote request', candidate)
 		self.messenger.send(reply, candidate)
 		print('\n', self.id, ' replied to ', candidate, ' request for votes')
 
 	def receive_append_entries_reply(self, message: dict):
-		print('\n', self.id, ' received append entries reply')
+		print('\n', self.id, ' received append entries reply :', message)
 
 	def receive_vote_reply(self, message: dict):
-		print('\n', self.id, ' received vote reply')
-		if message['voteGranted']['value'] == 'True':
+		vote_granted = message['voteGranted']
+		print('\n', self.id, ' received vote reply :', message)
+
+		if vote_granted == 'True':
 			self.vote_count += 1
 			print('\n', self.id, ' vote count = ', self.vote_count)
 		if self.vote_count > math.floor(self.replica_count/2):
@@ -146,17 +152,13 @@ class Replica:
 					'DataType': 'String',
 					'StringValue':'AppendEntriesRPC'
 					},
-				'leaderId': {
+				'leaderID': {
 					'DataType': 'String',
 					'StringValue': self.id
 					},
 				'term'  : {
 					'DataType': 'String',
 					'StringValue': str(self.current_term)
-					},
-				'entries': {
-					'DataType': 'String',
-					'StringValue': []
 					}
 				#'prevLogIndex' : 'self.prevLogIndex',
 				#'prevLogTerm' : 'self.prevLogTerm',
@@ -208,7 +210,6 @@ class Replica:
 					'StringValue': voteGranted
 					}
 				}
-
 		else:
 			message = {
 				'messageType': {
@@ -250,7 +251,7 @@ if __name__ == '__main__':
 	Append Entries message attributes:
 	{
 		'messageType' : 'AppendEntriesRPC',
-		'leaderId': self.id
+		'leaderID': self.id
 		'term'  : str(self.current_term),
 		'prevLogIndex' : 'self.prevLogIndex',
 		'prevLogTerm' : 'self.prevLogTerm',

@@ -85,10 +85,23 @@ class Messenger:
                 QueueUrl=self.incoming_queue_URL,
                 ReceiptHandle=receipt_handle
             )
-            print('\n',self.id,' Received and deleted message : \n\"{}\"'.format(message))
+            # print('\n',self.id,' Received and deleted message : \n\"{}\"'.format(message))
 
-            # this calls on the holding class to handle the messages, 
-            self.target.handle_incoming_message(message)
+            # this calls on the holding class to handle the messages,
+
+            msg = self.reduce_message(message) 
+
+            self.target.handle_incoming_message(msg)
+
+    def reduce_message(self, SQSmessage:dict) -> dict:
+        print("##########################")
+        msg = {}
+        for key, value in SQSmessage.items():
+            msg[key] = value['StringValue']
+        return msg
+
+    def format_for_SQS(self, message:dict) -> dict:
+        pass
 
     def send(self, message: dict, destination: str):
         '''
