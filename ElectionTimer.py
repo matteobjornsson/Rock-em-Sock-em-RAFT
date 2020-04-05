@@ -29,8 +29,10 @@ class Election_Timer:
         timeout = self.new_timeout()
         #start the timer
         start = clock()
+        count = 0
         while self.running:
             while not self.stop:
+                count += 1
                 if self.restart:
                     timeout = self.new_timeout()
                     start = clock()
@@ -38,9 +40,11 @@ class Election_Timer:
 
                 elapsed_time = clock() - start
                 if elapsed_time > timeout:
-                    print('Countodwn elapsed, ', self.target.id, ' Starting Election       ')
+                    print('Countodwn elapsed ', timeout, ',', self.target.id, ' Starting Election       ')
                     self.target.startElection()
                     self.restart_timer()
                     break
                 else:
-                    print('Election Timer: ', timeout-elapsed_time, end = '\r')  
+                    if count > 500000: 
+                        print('Election Timer: ', timeout-elapsed_time)  
+                        count =0

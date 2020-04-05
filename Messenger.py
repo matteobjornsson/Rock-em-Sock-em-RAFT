@@ -27,7 +27,7 @@ class Messenger:
     def start_incoming_message_thread(self):
         t = Thread(
             target=self.listen_for_messages,
-            name='Incoming Message Thread',
+            name=('Incoming Message Thread'+self.id),
             daemon=True
             )
         t.start()
@@ -54,10 +54,10 @@ class Messenger:
             receipt_handle = response['Messages'][0]['ReceiptHandle']
             # delete the message after receiving
             self.sqs.delete_message(
-                QueueUrl=self.message_queue,
+                QueueUrl=self.incoming_queue_URL,
                 ReceiptHandle=receipt_handle
             )
-            print('Received and deleted message : \n\"{}\"'.format(message))
+            print('\n',self.id,' Received and deleted message : \n\"{}\"'.format(message))
 
             message_type = message['messageType']
             if message_type == 'AppendEntriesRPC':
@@ -79,7 +79,7 @@ class Messenger:
         # included to ensure all messages have a different non-duplication hash:
         timestamp = str(datetime.now()) 
 
-        message_body = 'Message # {} from {}. {}'.format(self.count, self.id, timestamp)
+        message_body = 'Message # {} from {}. {}'.format(self.msg_count, self.id, timestamp)
 
         # response stores confirmation data from SQS
         response = self.sqs.send_message(

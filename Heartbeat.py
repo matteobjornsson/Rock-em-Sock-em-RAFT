@@ -14,7 +14,7 @@ class Heartbeat:
     def kill_thread(self):
         self.running = False
 
-    def stop(self):
+    def stop_heartbeat(self):
         self.stop = True
 
     def restart_timer(self):
