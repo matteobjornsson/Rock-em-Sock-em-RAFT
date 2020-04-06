@@ -130,13 +130,13 @@ class Replica:
 	def receive_vote_reply(self, message: dict):
 		vote_granted = message['voteGranted']
 		print('\n', self.id, ' received vote reply :', message)
-
-		if vote_granted == 'True':
-			self.vote_count += 1
-			print('\n', self.id, ' vote count = ', self.vote_count)
-		if self.vote_count > math.floor(self.replica_count/2):
-			self.set_state_to_leader()
-			print('\n', self.id, ' majority votes acquired')
+		if self.election_state == 'candidate':
+			if vote_granted == 'True':
+				self.vote_count += 1
+				print('\n', self.id, ' vote count = ', self.vote_count)
+			if self.vote_count > math.floor(self.replica_count/2):
+				self.set_state_to_leader()
+				print('\n', self.id, ' majority votes acquired')
 
 # Helper Functions
 #################################################################
