@@ -11,6 +11,12 @@ class Heartbeat:
         self.restart = False
         self.stop = True
 
+        t = Thread( 
+			target=self.run, 
+			name='Heartbeat Thread'
+			)
+        t.start()
+
     def kill_thread(self):
         self.running = False
 
@@ -37,8 +43,12 @@ class Heartbeat:
 
                 elapsed_time = clock() - start
                 if elapsed_time > self.duration:
-                    print('Sending Heartbeat ........       ')
-                    self.target.send_heartbeat()
+                    if self.target.election_state == 'leader':
+                        print('Sending Heartbeat ........       ')
+                        self.target.send_heartbeat()
+                    elif self.target.election_state == 'candidate':
+                        print('Re-requesting votes ........')
+                        self.target.request_votes()
                     self.restart = True
                     break
                 else:

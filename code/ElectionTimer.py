@@ -11,6 +11,12 @@ class Election_Timer:
         self.restart = False
         self.stop = False
 
+        t = Thread( 
+			target=self.run, 
+			name='Election Timer Thread'
+			)
+        t.start()
+
     def kill_thread(self):
         self.running = False
 
