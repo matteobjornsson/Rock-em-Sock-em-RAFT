@@ -101,7 +101,13 @@ class Messenger:
         return msg
 
     def format_for_SQS(self, message:dict) -> dict:
-        pass
+        SQSmsg = {}
+        for key, value in message.items():
+            SQSmsg[key] = {
+                'Datatype': 'String',
+                'StringValue': value
+                }
+        return SQSmsg
 
     def send(self, message: dict, destination: str):
         '''
@@ -114,18 +120,34 @@ class Messenger:
         timestamp = str(datetime.now()) 
 
         message_body = 'Message # {} from {}. {}'.format(self.msg_count, self.id, timestamp)
-
+        SQSmsg = self.format_for_SQS(message)
+        
         # response stores confirmation data from SQS
         response = self.sqs.send_message(
             QueueUrl=message_queue_URLs[destination],
-            MessageAttributes=message,
+            MessageAttributes=SQSmsg,
             MessageGroupId='queue',
             MessageBody=message_body
         )
         print('Message sent from ', self.id, ' to ', destination, ': ', message)
 
-#if __name__ == '__main__':
+if __name__ == '__main__':
 
+    message = {
+        'attribute1': 'value1', 
+        'attribute2': 'value2',
+        'attribute3': 'value3'
+        }
+    
+    print(message)
+    SQSmsg = {}
+    for key, value in message.items():
+        SQSmsg[key] = {
+            'Datatype': 'String',
+            'StringValue': value
+            }
+
+    print(SQSmsg)
 
 
     '''

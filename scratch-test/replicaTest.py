@@ -27,26 +27,9 @@ class Replica:
 
 
 		self.messenger = Messenger(self.id, self)
-		self.election_timer = self.start_election_timer()
-		self.heartbeat = self.start_heartbeat()
-
-	def start_election_timer(self):
-		et = Election_Timer(self.timer_length, self)
-		t = Thread( 
-			target=et.run, 
-			name='Election Timer Thread'
-			)
-		t.start()
-		return et    
-
-	def start_heartbeat(self):
-		hb = Heartbeat(self.timer_length, self)
-		t = Thread( 
-			target=hb.run, 
-			name='Heartbeat Thread'
-			)
-		t.start()
-		return hb 
+		self.election_timer = Election_Timer(self.timer_length, self)
+		self.heartbeat = Heartbeat(self.timer_length, self)
+   
 
 # Change Replica State: 
 #################################################################
@@ -75,7 +58,7 @@ class Replica:
 			print('\n', self.id, ' set state to candidate')
 			self.election_state = 'candidate'
 			self.vote_count = 1
-			self.heartbeat.stop_heartbeat()
+			self.heartbeat.stop_timer()
 
 # Process incoming messages:
 #################################################################
@@ -130,13 +113,13 @@ class Replica:
 	def receive_vote_reply(self, message: dict):
 		vote_granted = message['voteGranted']
 		print('\n', self.id, ' received vote reply :', message)
-
-		if vote_granted == 'True':
-			self.vote_count += 1
-			print('\n', self.id, ' vote count = ', self.vote_count)
-		if self.vote_count > math.floor(self.replica_count/2):
-			self.set_state_to_leader()
-			print('\n', self.id, ' majority votes acquired')
+		if self.election_state == 'candidate':
+			if vote_granted == 'True':
+				self.vote_count += 1
+				print('\n', self.id, ' vote count = ', self.vote_count)
+			if self.vote_count > math.floor(self.replica_count/2):
+				self.set_state_to_leader()
+				print('\n', self.id, ' majority votes acquired')
 
 # Helper Functions
 #################################################################
