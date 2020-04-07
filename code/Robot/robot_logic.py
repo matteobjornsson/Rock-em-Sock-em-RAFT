@@ -10,7 +10,6 @@ class RobotBlockedError(ValueError):
     def __init__(self, message):
         self.message = message
 
-
 class Robot:
     """
 
@@ -24,15 +23,16 @@ class Robot:
         """
         self.color = color
         self.state = ''
+        self.robot_game_state = ''
         self.blocked = False
         self.timer = None
         self._id = 'client-' + self.color
         self.messenger = Messenger(self._id, self)
 
     def handle_incoming_message(self, msg:dict):
-        print(msg['msg'])
-        if msg['msg'] == 'Your punch failed...':
-            self.punch_failed()
+        self.robot_game_state = msg['msg']
+        if self.robot_game_state == 'blocked':
+            self.punch_blocked()
 
     def timer_action(self):
         """
@@ -55,6 +55,15 @@ class Robot:
         new_timer = threading.Timer(seconds, self.timer_action)
         new_timer.start()
         self.timer = new_timer
+
+    def stop_game(self):
+        """
+        User chose to stop game.
+        Send message to server to notify other player.
+        :return:
+        """
+        self.state = 'exit'
+        self.send_to_leader()
 
     def punch_with_left(self):
         """
@@ -84,7 +93,7 @@ class Robot:
         else:
             raise RobotBlockedError("Robot is blocked from punching.")
 
-    def punch_failed(self):
+    def punch_blocked(self):
         """
         Call if robot receives message that punch failed.
         Blocks robot from punching for 3 seconds.

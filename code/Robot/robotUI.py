@@ -14,25 +14,37 @@ class UI:
         print("Q = punch with left \nW = punch with right \nA = block with left \nS = block with right \n0 = Exit")
         while self.running_game:
             user_choice = input()
-            if user_choice == 'Q':
-                try:
-                    self.robot.punch_with_left()
-                except RobotBlockedError:
-                    print("robot cannot punch right now")
-            elif user_choice == 'W':
-                try:
-                    self.robot.punch_with_right()
-                except RobotBlockedError:
-                    print("robot cannot punch right now")
-            elif user_choice == 'A':
-                self.robot.block_with_left()
-            elif user_choice == 'S':
-                self.robot.block_with_right()
-            elif user_choice == '0':
+
+            if self.robot.robot_game_state == 'won':
+                print("Congratulations! You knocked your opponents' head off!")
                 self.running_game = False
-                print("We hope you had fun! Goodbye")
+            elif self.robot.robot_game_state == 'lost':
+                print('Oops, looks like your head got knocked off. ')
+                self.running_game = False
+            elif self.robot.robot_game_state == 'exit':
+                print("Your opponent forfeited, you win!")
+                self.running_game = False
             else:
-                print("not a valid input")
+                if user_choice.upper() == 'Q':
+                    try:
+                        self.robot.punch_with_left()
+                    except RobotBlockedError:
+                        print("robot cannot punch right now")
+                elif user_choice.upper() == 'W':
+                    try:
+                        self.robot.punch_with_right()
+                    except RobotBlockedError:
+                        print("robot cannot punch right now")
+                elif user_choice.upper() == 'A':
+                    self.robot.block_with_left()
+                elif user_choice.upper() == 'S':
+                    self.robot.block_with_right()
+                elif user_choice == '0':
+                    self.robot.stop_game()
+                    self.running_game = False
+                    print("We hope you had fun! Goodbye")
+                else:
+                    print('Not a valid input, try again.')
 
 
 if __name__ == '__main__':

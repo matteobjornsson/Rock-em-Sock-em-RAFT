@@ -18,6 +18,11 @@ class Server:
         self.received_msg = {}
         self.server_logic = ServerLogic()
 
+    def handle_incoming_message(self, msg:dict):
+        self.received_msg = msg
+        self.update_status()
+        self.check_game_status()
+
     def update_status(self):
         """
         Updates game status.
@@ -28,14 +33,31 @@ class Server:
         """
         if self.received_msg['id'] == 'client-red':
             self.server_logic.set_red_status(self.received_msg['state'])
-            self.game_state, msg_to_send = self.server_logic.logic_after_commit(self.received_msg['id'])
-            if self.consensus_module == 'leader':
-                self.messenger.send(msg_to_send, 'client-red')
+            if self.received_msg['state'] != 'exit':
+                self.game_state, msg_to_send = self.server_logic.logic_after_commit(self.received_msg['id'])
+                if self.consensus_module == 'leader':
+                    self.messenger.send(msg_to_send, 'client-red')
+            elif self.received_msg['state'] == 'exit':
+                msg_to_send = {'msg': 'exit'}
+                self.messenger.send(msg_to_send, 'client-blue')
+
         elif self.received_msg['id'] == 'client-blue':
             self.server_logic.set_blue_status(self.received_msg['state'])
-            self.game_state, msg_to_send = self.server_logic.logic_after_commit(self.received_msg['id'])
-            if self.consensus_module == 'leader':
-                self.messenger.send(msg_to_send, 'client-blue')
+            if self.received_msg['state'] != 'exit':
+                self.game_state, msg_to_send = self.server_logic.logic_after_commit(self.received_msg['id'])
+                if self.consensus_module == 'leader':
+                    self.messenger.send(msg_to_send, 'client-blue')
+            elif self.received_msg['state'] == 'exit':
+                msg_to_send = {'msg': 'exit'}
+                self.messenger.send(msg_to_send, 'client-red')
+
+    def check_game_status(self):
+        msg_to_send = {'msg': 'lost'}
+        if self.game_state == 'blue_won':
+            self.messenger.send(msg_to_send, 'client-red')
+        elif self.game_state == 'red_won':
+            self.messenger.send(msg_to_send, 'client-blue')
+
 
 
 class ServerLogic:
@@ -71,14 +93,14 @@ class ServerLogic:
             if (self.red_status == 'punch_right' and self.blue_status != 'block_left') or (
                     self.red_status == 'punch_left' and self.blue_status != 'block_right'):
                 if random.random() <= 0.1:
-                    return_message = 'Punch connected. You won!'
+                    return_message = 'won'
                     game_state = 'red_won'
                 else:
-                    return_message = 'Your punch failed...'
+                    return_message = 'failed'
                     game_state = 'ongoing'
             elif (self.red_status == 'punch_right' and self.blue_status == 'block_left') or (
                     self.red_status == 'punch_left' and self.blue_status == 'block_right'):
-                return_message = 'Your punch was blocked...'
+                return_message = 'blocked'
                 game_state = 'ongoing'
             else:
                 game_state = 'ongoing'
@@ -88,14 +110,14 @@ class ServerLogic:
             if (self.blue_status == 'punch_right' and self.red_status != 'block_left') or (
                     self.blue_status == 'punch_left' and self.red_status != 'block_right'):
                 if random.random() <= 0.1:
-                    return_message = 'Punch connected. You won!'
+                    return_message = 'won'
                     game_state = 'blue_won'
                 else:
-                    return_message = 'Your punch failed...'
+                    return_message = 'failed'
                     game_state = 'ongoing'
             elif (self.blue_status == 'punch_right' and self.red_status == 'block_left') or (
                     self.blue_status == 'punch_left' and self.red_status == 'block_right'):
-                return_message = 'Your punch was blocked...'
+                return_message = 'blocked'
                 game_state = 'ongoing'
             else:
                 game_state = 'ongoing'
