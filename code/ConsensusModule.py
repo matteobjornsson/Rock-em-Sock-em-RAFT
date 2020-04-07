@@ -80,7 +80,16 @@ class ConsensusModule:
 
 
 	def handle_incoming_message(self, message: dict):
-		pass
+		message_type = message['messageType']
+		if message_type == 'AppendEntriesRPC':
+			self.receive_append_entries_request(message)
+		elif message_type == 'AppendReply':
+			self.receive_append_entries_reply(message)
+		elif message_type == 'RequestVotesRPC':
+			self.receive_vote_request(message)
+		elif message_type == 'VoteReply':
+			self.receive_vote_reply(message)
+			
 
 	def receive_append_entry_request(self, message: dict):
 		pass
@@ -94,5 +103,43 @@ class ConsensusModule:
 	def receive_vote_reply(self, message: dict):
 		pass
 
-	def make_message(self, message_type: str):
-		pass
+
+	def make_message(self, message_type: str, destination: str = '') -> dict:
+		'''
+		options: 'heartbeat', 'reply to append request', 'request votes', 
+		'reply to vote request'. returns a dictionary
+		Include destination with reply to vote request. 
+		'''
+		if message_type == 'heartbeat':
+			message = {
+				'messageType': 	'AppendEntriesRPC',
+				'leaderID': 	self.id,
+				'term': 		str(self.term)
+				#'prevLogIndex' : 'self.prevLogIndex',
+				#'prevLogTerm' : 'self.prevLogTerm',
+				#'leaderCommit' : 'self.commitIndex'
+			}
+		elif message_type == 'reply to append request':
+			message = {
+				'messageType':	'AppendReply',
+				'term':			str(self.term)
+				#'success' : {'value': 'True'}
+			}
+		elif message_type == 'request votes':
+			message = {
+				'messageType':	'RequestVotesRPC',
+				'term':			str(self.term),
+				'candidateID':	self.id
+				#'lastLogIndex': {'value': self.lastLogIndex},
+				#'lastLogTerm': {'value': self.lastLogTerm}
+			}
+		elif message_type == 'reply to vote request':
+			voteGranted = 'False'
+			if self.voted_for == destination:
+				voteGranted = 'True'
+
+			message = {
+				'messageType': 	'voteReply',
+				'term':			str(self.term),
+				'voteGranted':	voteGranted
+			}
