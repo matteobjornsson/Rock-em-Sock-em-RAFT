@@ -91,6 +91,7 @@ class ConsensusModule:
 	def send_heartbeat(self):
 		'''Make a heartbeat message and send it to all peers. Used by leader'''
 		heartbeat = self.make_message('heartbeat')
+		print(heartbeat)
 		for peer in self.peers: # send to peers
 			self.messenger.send(heartbeat, peer)
 		
@@ -122,11 +123,11 @@ class ConsensusModule:
 		
 	def handle_incoming_message(self, message: dict):
 		message_type = message['messageType']
-		print('\n********* You Have Passed A message Back to CM: {} *****\n'.format(message_type))
+		print('\n********* You Have Passed A message Back to CM: {} *****\n'.format(message))
 		if message_type == 'AppendEntriesRPC':
-			self.receive_append_entries_request(message)
+			self.receive_append_entry_request(message)
 		elif message_type == 'AppendReply':
-			self.receive_append_entries_reply(message)
+			self.receive_append_entry_reply(message)
 		elif message_type == 'RequestVotesRPC':
 			self.receive_vote_request(message)
 		elif message_type == 'VoteReply':
@@ -144,7 +145,7 @@ class ConsensusModule:
 		
 		more details to follow later'''
 		leader = message['leaderID']
-		incoming_term = message['term']
+		incoming_term = int(message['term'])
 
 		print('\n', self.id, ' received append entry request from ', leader, ': \n',  message)
 
@@ -209,7 +210,7 @@ class ConsensusModule:
 				self.vote_count += 1
 				print('\n', self.id, ' vote count = ', self.vote_count)
 			if self.vote_count > math.floor(len(self.peers)/2):
-				self.set_state_to_leader()
+				self.set_leader()
 				print('\n', self.id, ' majority votes acquired')
 
 	def make_message(self, message_type: str, destination: str = '') -> dict:
@@ -248,7 +249,7 @@ class ConsensusModule:
 				voteGranted = 'True'
 
 			message = {
-				'messageType': 	'voteReply',
+				'messageType': 	'VoteReply',
 				'senderID':		self.id,
 				'term':			str(self.term),
 				'voteGranted':	voteGranted

@@ -94,7 +94,6 @@ class Messenger:
             self.target.handle_incoming_message(msg)
 
     def reduce_message(self, SQSmessage:dict) -> dict:
-        print("##########################")
         msg = {}
         for key, value in SQSmessage.items():
             msg[key] = value['StringValue']
