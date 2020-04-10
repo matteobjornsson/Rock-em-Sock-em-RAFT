@@ -47,7 +47,7 @@ class Election_Timer:
                 elapsed_time = clock() - start
                 if elapsed_time > timeout:
                     print('Countodwn elapsed ', timeout, ',', self.target.id, ' Starting Election       ')
-                    self.target.startElection()
+                    self.target.start_election()
                     self.restart_timer()
                     break
                 else:

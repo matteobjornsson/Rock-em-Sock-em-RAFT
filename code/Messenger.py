@@ -94,7 +94,6 @@ class Messenger:
             self.target.handle_incoming_message(msg)
 
     def reduce_message(self, SQSmessage:dict) -> dict:
-        print("##########################")
         msg = {}
         for key, value in SQSmessage.items():
             msg[key] = value['StringValue']
@@ -120,6 +119,7 @@ class Messenger:
         timestamp = str(datetime.now()) 
 
         message_body = 'Message # {} from {}. {}'.format(self.msg_count, self.id, timestamp)
+        
         SQSmsg = self.format_for_SQS(message)
         
         # response stores confirmation data from SQS
@@ -129,7 +129,7 @@ class Messenger:
             MessageGroupId='queue',
             MessageBody=message_body
         )
-        print('Message sent from ', self.id, ' to ', destination, ': ', message)
+        #print('Message sent from ', self.id, ' to ', destination, ': ', message)
 
 if __name__ == '__main__':
 
@@ -164,6 +164,7 @@ if __name__ == '__main__':
     Append Response message Attributes:
     {
         'messageType' : 'AppendReply',
+        'senderID': self.id
         'term' : str(self.current_term),
         'success' : 'True'
     }
@@ -180,6 +181,7 @@ if __name__ == '__main__':
     Request Vote Reply:
     {
         'messageType' : 'VoteReply',
+        'senderID' : self.id
         'term': str(self.current_term),
         'voteGranted': 'True'
     }
