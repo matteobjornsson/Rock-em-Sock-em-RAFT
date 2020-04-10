@@ -1,6 +1,8 @@
 import threading, time
-from code.Messenger import Messenger
-from code.Server.server_logic import Server
+import sys
+sys.path.append('../code')
+from Messenger import Messenger
+from Server.server_logic import Server
 
 
 class RobotBlockedError(ValueError):

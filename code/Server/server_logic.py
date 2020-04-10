@@ -1,4 +1,6 @@
-from code.Messenger import Messenger
+import sys
+sys.path.append('..')
+from Messenger import Messenger
 import random
 
 

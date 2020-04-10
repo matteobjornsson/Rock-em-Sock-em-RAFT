@@ -1,4 +1,8 @@
-from code.Robot.robot_logic import *
+import sys
+sys.path.append('..')
+import argparse
+from Server.server_logic import Server
+from robot_logic import *
 
 
 class UI:
@@ -49,6 +53,10 @@ class UI:
 
 
 if __name__ == '__main__':
-    ui = UI('red')
+    parser =  argparse.ArgumentParser(description='Messenger Utility')
+    parser.add_argument('id', help='id', type=str)
+	#parser.add_argument('peerCount', help = 'peerCount', type=int)
+    args = parser.parse_args()
+    ui = UI(args.id)
     server = Server('leader')
     ui.run_game()
