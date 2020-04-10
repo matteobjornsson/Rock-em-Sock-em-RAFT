@@ -27,26 +27,9 @@ class Replica:
 
 
 		self.messenger = Messenger(self.id, self)
-		self.election_timer = self.start_election_timer()
-		self.heartbeat = self.start_heartbeat()
-
-	def start_election_timer(self):
-		et = Election_Timer(self.timer_length, self)
-		t = Thread( 
-			target=et.run, 
-			name='Election Timer Thread'
-			)
-		t.start()
-		return et    
-
-	def start_heartbeat(self):
-		hb = Heartbeat(self.timer_length, self)
-		t = Thread( 
-			target=hb.run, 
-			name='Heartbeat Thread'
-			)
-		t.start()
-		return hb 
+		self.election_timer = Election_Timer(self.timer_length, self)
+		self.heartbeat = Heartbeat(self.timer_length, self)
+   
 
 # Change Replica State: 
 #################################################################
@@ -58,7 +41,7 @@ class Replica:
 		self.election_timer.restart_timer()
 		self.vote_count = 0
 		self.voted_for = 'Null'
-		self.heartbeat.stop_heartbeat()
+		self.heartbeat.stop_timer()
 
 	def set_state_to_leader(self):
 		print('\n', self.id, ' Set state to leader')
@@ -75,7 +58,7 @@ class Replica:
 			print('\n', self.id, ' set state to candidate')
 			self.election_state = 'candidate'
 			self.vote_count = 1
-			self.heartbeat.stop_heartbeat()
+			self.heartbeat.stop_timer()
 
 # Process incoming messages:
 #################################################################
@@ -112,7 +95,7 @@ class Replica:
 		incoming_term = int(message['term'])
 		print('\n', self.id, ' received vote request from ', candidate, ': \n', message)
 		
-		if incoming_term >= self.current_term:
+		if incoming_term > self.current_term:
 			self.set_state_to_follower(incoming_term)
 			print('\n', self.id, ' greater term detected, reverting to follower')
 
@@ -130,13 +113,13 @@ class Replica:
 	def receive_vote_reply(self, message: dict):
 		vote_granted = message['voteGranted']
 		print('\n', self.id, ' received vote reply :', message)
-
-		if vote_granted == 'True':
-			self.vote_count += 1
-			print('\n', self.id, ' vote count = ', self.vote_count)
-		if self.vote_count > math.floor(self.replica_count/2):
-			self.set_state_to_leader()
-			print('\n', self.id, ' majority votes acquired')
+		if self.election_state == 'candidate':
+			if vote_granted == 'True':
+				self.vote_count += 1
+				print('\n', self.id, ' vote count = ', self.vote_count)
+			if self.vote_count > math.floor(self.replica_count/2):
+				self.set_state_to_leader()
+				print('\n', self.id, ' majority votes acquired')
 
 # Helper Functions
 #################################################################
@@ -148,47 +131,24 @@ class Replica:
 		'''
 		if message_type == 'heartbeat':
 			message = {
-				'messageType' : {
-					'DataType': 'String',
-					'StringValue':'AppendEntriesRPC'
-					},
-				'leaderID': {
-					'DataType': 'String',
-					'StringValue': self.id
-					},
-				'term'  : {
-					'DataType': 'String',
-					'StringValue': str(self.current_term)
-					}
+				'messageType': 'AppendEntriesRPC',
+				'leaderID': self.id,
+				'term'  : str(self.current_term)
 				#'prevLogIndex' : 'self.prevLogIndex',
 				#'prevLogTerm' : 'self.prevLogTerm',
 				#'leaderCommit' : 'self.commitIndex'
 				}
 		elif message_type == 'reply to append request':
 			message = {
-				'messageType' : {
-					'DataType': 'String',
-					'StringValue':'AppendReply'
-					},
-				'term' : {
-					'DataType': 'String',
-					'StringValue': str(self.current_term)
-					},
+				'messageType':'AppendReply',
+				'term' : str(self.current_term),
 				#'success' : {'value': 'True'}
 				}
 		elif message_type == 'request votes':
 			message = {
-				'messageType' : {
-					'DataType': 'String',
-					'StringValue': 'RequestVotesRPC'
-					},
-				'term': {'DataType': 'String',
-				'StringValue': str(self.current_term)
-				},
-				'candidateID': {
-					'DataType': 'String',
-					'StringValue': self.id
-					}
+				'messageType' :'RequestVotesRPC',
+				'term': str(self.current_term),
+				'candidateID': self.id
 				#'lastLogIndex': {'value': self.lastLogIndex},
 				#'lastLogTerm': {'value': self.lastLogTerm}
 				}
@@ -197,25 +157,13 @@ class Replica:
 			if  self.voted_for == destination:
 				voteGranted = 'True'
 			message ={
-				'messageType' : {
-					'DataType': 'String',
-					'StringValue': 'VoteReply'
-					},
-				'term': {
-					'DataType': 'String',
-					'StringValue': str(self.current_term)
-					},
-				'voteGranted': {
-					'DataType': 'String',
-					'StringValue': voteGranted
-					}
+				'messageType': 'VoteReply',
+				'term': str(self.current_term),
+				'voteGranted':  voteGranted
 				}
 		else:
 			message = {
-				'messageType': {
-					'DataType': 'String',
-					'StringValue': 'blank'
-				}      
+				'messageType': 'blank'      
 			}
 
 		return message
@@ -231,7 +179,7 @@ class Replica:
 			self.messenger.send(request, peer)
 		
 
-	def startElection(self):
+	def start_election(self):
 		self.set_state_to_candidate()
 		print('\n', self.id, " started an election")
 		self.request_votes()

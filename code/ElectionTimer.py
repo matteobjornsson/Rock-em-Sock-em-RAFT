@@ -11,6 +11,12 @@ class Election_Timer:
         self.restart = False
         self.stop = False
 
+        t = Thread( 
+			target=self.run, 
+			name='Election Timer Thread'
+			)
+        t.start()
+
     def kill_thread(self):
         self.running = False
 
@@ -41,10 +47,11 @@ class Election_Timer:
                 elapsed_time = clock() - start
                 if elapsed_time > timeout:
                     print('Countodwn elapsed ', timeout, ',', self.target.id, ' Starting Election       ')
-                    self.target.startElection()
+                    self.target.start_election()
                     self.restart_timer()
                     break
                 else:
-                    if count > 100000: 
-                        print('Election Timer: ', timeout-elapsed_time)  
-                        count =0
+                    #if count > 100000: 
+                    sleep(.2)
+                    print('Election Timer: ', timeout-elapsed_time)  
+                        #count =0
