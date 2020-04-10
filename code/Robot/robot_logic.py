@@ -1,5 +1,6 @@
 import threading, time
 from code.Messenger import Messenger
+from code.Server.server_logic import Server
 
 
 class RobotBlockedError(ValueError):
@@ -12,9 +13,15 @@ class RobotBlockedError(ValueError):
 
 class Robot:
     """
-
+    Robot class to perform the different punch and block actions, as well as any required logic.
+    :var color: What robot the player is using
+    :var action_state: Robot action state (punch_left, punch_right, block_left, block_right)
+    :var game_state: Overall robot state in game (won, lost, blocked, failed, exit)
+    :var blocked: Boolean to check whether robot is blocked from punching (True) or not (False)
+    :var timer: Timer to set when robot is blocked from punching
+    :var _id: messenger queue id
+    :var messenger: Handles incoming messages and sends messages.
     """
-
     def __init__(self, color):
         """
         Robot constructor.
@@ -22,16 +29,24 @@ class Robot:
         :param color: identifies which robot is being used.
         """
         self.color = color
-        self.state = ''
-        self.robot_game_state = ''
+        self.action_state = ''
+        self.game_state = ''
         self.blocked = False
         self.timer = None
         self._id = 'client-' + self.color
         self.messenger = Messenger(self._id, self)
 
     def handle_incoming_message(self, msg:dict):
-        self.robot_game_state = msg['msg']
-        if self.robot_game_state == 'blocked':
+        """
+        Method that needs to be implemented for Messenger class.
+        Performs the following actions when a message is pulled from the queue.
+        1. checks game state based on message
+        2. Sets punch block timer for 3 seconds if punch was blocked
+        :param msg:
+        :return:
+        """
+        self.game_state = msg['msg']
+        if self.game_state == 'blocked':
             self.punch_blocked()
 
     def timer_action(self):
@@ -62,7 +77,7 @@ class Robot:
         Send message to server to notify other player.
         :return:
         """
-        self.state = 'exit'
+        self.action_state = 'exit'
         self.send_to_leader()
 
     def punch_with_left(self):
@@ -72,7 +87,7 @@ class Robot:
         :return:
         """
         if not self.blocked:
-            self.state = 'punch_left'
+            self.action_state = 'punch_left'
             self.blocked = True
             self.send_to_leader()
             self.start_timer_secs(1.0)
@@ -86,7 +101,7 @@ class Robot:
         :return:
         """
         if not self.blocked:
-            self.state = 'punch_right'
+            self.action_state = 'punch_right'
             self.blocked = True
             self.send_to_leader()
             self.start_timer_secs(1.0)
@@ -111,7 +126,7 @@ class Robot:
         Block with left arm.
         :return:
         """
-        self.state = 'block_left'
+        self.action_state = 'block_left'
         self.send_to_leader()
 
     def block_with_right(self):
@@ -119,7 +134,7 @@ class Robot:
         Block with right arm.
         :return:
         """
-        self.state = 'block_right'
+        self.action_state = 'block_right'
         self.send_to_leader()
 
     def send_to_leader(self):
@@ -127,5 +142,12 @@ class Robot:
         Send message to server, i.e., leader queue.
         :return:
         """
-        msg_dictionary = {'id': self._id, 'state': self.state}
+        msg_dictionary = {'_id': self._id, 'state': self.action_state}
         self.messenger.send(msg_dictionary, "leader")
+
+
+if __name__ == '__main__':
+    robot_blue = Robot('blue')
+    robot_red = Robot('red')
+    server = Server('leader')
+    robot_blue.punch_with_right()

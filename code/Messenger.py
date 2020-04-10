@@ -42,7 +42,7 @@ class Messenger:
         self.target = target    # store class that is using this messenger
 
         # start a thread to pull incoming messages from queue
-        self.incoming_message_thread = self.start_incoming_message_thread()  
+        self.incoming_message_thread = self.start_incoming_message_thread()
         self.msg_count = 0
 
 
@@ -104,7 +104,7 @@ class Messenger:
         SQSmsg = {}
         for key, value in message.items():
             SQSmsg[key] = {
-                'Datatype': 'String',
+                'DataType': 'String',
                 'StringValue': value
                 }
         return SQSmsg
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     SQSmsg = {}
     for key, value in message.items():
         SQSmsg[key] = {
-            'Datatype': 'String',
+            'DataType': 'String',
             'StringValue': value
             }
 

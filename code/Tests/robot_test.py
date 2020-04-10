@@ -1,4 +1,5 @@
-import unittest, time
+import unittest
+from code.Robot.robot_logic import *
 
 
 class TestRobotMethods(unittest.TestCase):

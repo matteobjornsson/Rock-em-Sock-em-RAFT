@@ -14,16 +14,16 @@ class Server:
         self.messenger = Messenger(self.id, self)
         self.game_state = ''
         self.log = ''
-        self.consensus_module = None  # ConsensusModule()
-        self.received_msg = {}
+        self.consensus_module = 'leader'  # ConsensusModule() set to "leader" for testing purposes
         self.server_logic = ServerLogic()
 
-    def handle_incoming_message(self, msg:dict):
-        self.received_msg = msg
-        self.update_status()
+    def handle_incoming_message(self, msg):
+        received_msg = msg
+        print(received_msg)
+        self.update_status(received_msg)
         self.check_game_status()
 
-    def update_status(self):
+    def update_status(self, received_msg):
         """
         Updates game status.
         Checks whether the received message came from red or blue client,
@@ -31,23 +31,24 @@ class Server:
         Finally, message is sent to appropriate client.
         :return:
         """
-        if self.received_msg['id'] == 'client-red':
-            self.server_logic.set_red_status(self.received_msg['state'])
-            if self.received_msg['state'] != 'exit':
-                self.game_state, msg_to_send = self.server_logic.logic_after_commit(self.received_msg['id'])
+        print("update status")
+        if received_msg['_id'] == 'client-red':
+            print("entered client red")
+            self.server_logic.set_red_status(received_msg['state'])
+            if received_msg['state'] != 'exit':
+                self.game_state, msg_to_send = self.server_logic.logic_after_commit(received_msg['_id'])
                 if self.consensus_module == 'leader':
                     self.messenger.send(msg_to_send, 'client-red')
-            elif self.received_msg['state'] == 'exit':
+            elif received_msg['state'] == 'exit':
                 msg_to_send = {'msg': 'exit'}
                 self.messenger.send(msg_to_send, 'client-blue')
-
-        elif self.received_msg['id'] == 'client-blue':
-            self.server_logic.set_blue_status(self.received_msg['state'])
-            if self.received_msg['state'] != 'exit':
-                self.game_state, msg_to_send = self.server_logic.logic_after_commit(self.received_msg['id'])
+        elif received_msg['_id'] == 'client-blue':
+            self.server_logic.set_blue_status(received_msg['state'])
+            if received_msg['state'] != 'exit':
+                self.game_state, msg_to_send = self.server_logic.logic_after_commit(received_msg['_id'])
                 if self.consensus_module == 'leader':
                     self.messenger.send(msg_to_send, 'client-blue')
-            elif self.received_msg['state'] == 'exit':
+            elif received_msg['state'] == 'exit':
                 msg_to_send = {'msg': 'exit'}
                 self.messenger.send(msg_to_send, 'client-red')
 
@@ -57,7 +58,6 @@ class Server:
             self.messenger.send(msg_to_send, 'client-red')
         elif self.game_state == 'red_won':
             self.messenger.send(msg_to_send, 'client-blue')
-
 
 
 class ServerLogic:
@@ -89,9 +89,11 @@ class ServerLogic:
         """
         return_message = ''
         game_state = ''
+        print('blue is ', self.blue_status)
+        print('red is ', self.red_status)
         if msg_id == 'client-red':
-            if (self.red_status == 'punch_right' and self.blue_status != 'block_left') or (
-                    self.red_status == 'punch_left' and self.blue_status != 'block_right'):
+            if (self.red_status == 'punch_right' and not self.blue_status == 'block_left') or (
+                    self.red_status == 'punch_left' and not self.blue_status == 'block_right'):
                 if random.random() <= 0.1:
                     return_message = 'won'
                     game_state = 'red_won'
@@ -107,8 +109,8 @@ class ServerLogic:
                 return_message = 'Nothing happened.'
 
         elif msg_id == 'client-blue':
-            if (self.blue_status == 'punch_right' and self.red_status != 'block_left') or (
-                    self.blue_status == 'punch_left' and self.red_status != 'block_right'):
+            if (self.blue_status == 'punch_right' and not self.red_status == 'block_left') or (
+                    self.blue_status == 'punch_left' and not self.red_status == 'block_right'):
                 if random.random() <= 0.1:
                     return_message = 'won'
                     game_state = 'blue_won'

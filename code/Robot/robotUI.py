@@ -1,11 +1,12 @@
 from code.Robot.robot_logic import *
 
+
 class UI:
     """
-
+    UI that runs game on client side and passes through appropriate messages.
     """
-    def __init__(self):
-        self.robot = Robot(color='blue')
+    def __init__(self, color):
+        self.robot = Robot(color)
         self.running_game = True
 
     def run_game(self):
@@ -15,13 +16,13 @@ class UI:
         while self.running_game:
             user_choice = input()
 
-            if self.robot.robot_game_state == 'won':
+            if self.robot.game_state == 'won':
                 print("Congratulations! You knocked your opponents' head off!")
                 self.running_game = False
-            elif self.robot.robot_game_state == 'lost':
+            elif self.robot.game_state == 'lost':
                 print('Oops, looks like your head got knocked off. ')
                 self.running_game = False
-            elif self.robot.robot_game_state == 'exit':
+            elif self.robot.game_state == 'exit':
                 print("Your opponent forfeited, you win!")
                 self.running_game = False
             else:
@@ -48,6 +49,6 @@ class UI:
 
 
 if __name__ == '__main__':
-
-    ui = UI()
+    ui = UI('red')
+    server = Server('leader')
     ui.run_game()
