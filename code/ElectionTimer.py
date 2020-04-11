@@ -51,6 +51,7 @@ class Election_Timer:
                     self.restart_timer()
                     break
                 else:
-                    if count > 100000: 
-                        print('Election Timer: ', timeout-elapsed_time)  
-                        count =0
+                    #if count > 100000: 
+                    sleep(.2)
+                    print('Election Timer: ', timeout-elapsed_time)  
+                        #count =0
