@@ -4,13 +4,13 @@ from threading import Thread
 import boto3, botocore, random
 
 message_queue_URLs = {
-	'0': 'https://sqs.us-east-1.amazonaws.com/622058021374/0.fifo', 
-	'1': 'https://sqs.us-east-1.amazonaws.com/622058021374/1.fifo', 
-	'2': 'https://sqs.us-east-1.amazonaws.com/622058021374/2.fifo', 
-	'3': 'https://sqs.us-east-1.amazonaws.com/622058021374/3.fifo', 
-	'4': 'https://sqs.us-east-1.amazonaws.com/622058021374/4.fifo', 
-	'leader': 'https://sqs.us-east-1.amazonaws.com/622058021374/leader.fifo', 
-	'client-blue': 'https://sqs.us-east-1.amazonaws.com/622058021374/client-blue.fifo', 
+	'0': 'https://sqs.us-east-1.amazonaws.com/622058021374/0.fifo',
+	'1': 'https://sqs.us-east-1.amazonaws.com/622058021374/1.fifo',
+	'2': 'https://sqs.us-east-1.amazonaws.com/622058021374/2.fifo',
+	'3': 'https://sqs.us-east-1.amazonaws.com/622058021374/3.fifo',
+	'4': 'https://sqs.us-east-1.amazonaws.com/622058021374/4.fifo',
+	'leader': 'https://sqs.us-east-1.amazonaws.com/622058021374/leader.fifo',
+	'client-blue': 'https://sqs.us-east-1.amazonaws.com/622058021374/client-blue.fifo',
 	'client-red': 'https://sqs.us-east-1.amazonaws.com/622058021374/client-red.fifo'
 	}
 
@@ -31,9 +31,9 @@ class Messenger:
 
 	def __init__(self, id: str, target):
 		'''
-		Messenger constructor. Takes id from list 
-		'0', '1', '2', '3', '4', 'leader', 'client-blue', 'client-red'. 
-		Constructor must be passed a reference to the class that is using it. 
+		Messenger constructor. Takes id from list
+		'0', '1', '2', '3', '4', 'leader', 'client-blue', 'client-red'.
+		Constructor must be passed a reference to the class that is using it.
 		That class must implement handle_incoming_message(message: dict)
 		'''
 		self.id = id #id of self in system
@@ -42,7 +42,7 @@ class Messenger:
 		self.target = target    # store class that is using this messenger
 
 		# start a thread to pull incoming messages from queue
-		self.incoming_message_thread = self.start_incoming_message_thread()  
+		self.incoming_message_thread = self.start_incoming_message_thread()
 		self.msg_count = 0
 
 
@@ -51,16 +51,16 @@ class Messenger:
 		t = Thread(
 			target=self.listen_for_messages,
 			name=('Incoming Message Thread'+self.id),
-			daemon=True #this thread should always be running 
+			daemon=True #this thread should always be running
 			)
 		t.start()
-		return t    
+		return t
 
 	def listen_for_messages(self):
 		''' loop that pulls messages from given SQS queue
-		
-		messages attributes are kept in dictionary form and represent the 
-		message intended to be received. Messages are then passed to the 
+
+		messages attributes are kept in dictionary form and represent the
+		message intended to be received. Messages are then passed to the
 		target class via the target.handle_incoming_message(message) interface
 		'''
 		while True:
@@ -87,13 +87,13 @@ class Messenger:
 					QueueUrl=self.incoming_queue_URL,
 					ReceiptHandle=receipt_handle
 				)
-			except botocore.exceptions.ClientError: 
+			except botocore.exceptions.ClientError:
 				print("Receipt Handle Expired")
 			# print('\n',self.id,' Received and deleted message : \n\"{}\"'.format(message))
 
 			# this calls on the holding class to handle the messages,
 
-			msg = self.reduce_message(message) 
+			msg = self.reduce_message(message)
 
 			self.target.handle_incoming_message(msg)
 
@@ -114,18 +114,18 @@ class Messenger:
 
 	def send(self, message: dict, destination: str):
 		'''
-		send a message to the given destination queue. 
+		send a message to the given destination queue.
 		destination string should exist in the queue_suffixes list.
 		'''
 		# used to uniquely identify messages:
-		self.msg_count += 1 
+		self.msg_count += 1
 		# included to ensure all messages have a different non-duplication hash:
-		timestamp = str(datetime.now()) 
+		timestamp = str(datetime.now())
 
 		message_body = 'Message # {} from {}. {}'.format(self.msg_count, self.id, timestamp)
 		print("message from {} to {}: ".format(self.id, destination), message)
 		SQSmsg = self.format_for_SQS(message)
-		
+
 		# response stores confirmation data from SQS
 		response = self.sqs.send_message(
 			QueueUrl=message_queue_URLs[destination],
@@ -138,16 +138,16 @@ class Messenger:
 if __name__ == '__main__':
 
 	message = {
-		'attribute1': 'value1', 
+		'attribute1': 'value1',
 		'attribute2': 'value2',
 		'attribute3': 'value3'
 		}
-	
+
 	print(message)
 	SQSmsg = {}
 	for key, value in message.items():
 		SQSmsg[key] = {
-			'Datatype': 'String',
+			'DataType': 'String',
 			'StringValue': value
 			}
 
