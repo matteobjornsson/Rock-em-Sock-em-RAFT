@@ -1,6 +1,6 @@
 import threading
-from code.Messenger import Messenger
-from code.server_logic import Server
+from Messenger import Messenger
+from server_logic import Server
 
 
 class RobotBlockedError(ValueError):
