@@ -1,4 +1,4 @@
-from code.robot_logic import *
+from robot_logic import *
 import sys, threading
 
 
