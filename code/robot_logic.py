@@ -1,8 +1,6 @@
-import threading, time
-import sys
-sys.path.append('../code')
-from Messenger import Messenger
-from Server.server_logic import Server
+import threading
+from code.Messenger import Messenger
+from code.server_logic import Server
 
 
 class RobotBlockedError(ValueError):
@@ -13,7 +11,9 @@ class RobotBlockedError(ValueError):
     def __init__(self, message):
         self.message = message
 
+
 class Robot:
+
     """
     Robot class to perform the different punch and block actions, as well as any required logic.
     :var color: What robot the player is using
@@ -24,7 +24,7 @@ class Robot:
     :var _id: messenger queue id
     :var messenger: Handles incoming messages and sends messages.
     """
-    def __init__(self, color):
+    def __init__(self, color, ui):
         """
         Robot constructor.
         Starts a listener for its own thread.
@@ -37,6 +37,7 @@ class Robot:
         self.timer = None
         self._id = 'client-' + self.color
         self.messenger = Messenger(self._id, self)
+        self.ui = ui
 
     def handle_incoming_message(self, msg:dict):
         """
@@ -50,6 +51,20 @@ class Robot:
         self.game_state = msg['msg']
         if self.game_state == 'blocked':
             self.punch_blocked()
+        self.set_running_game()
+
+    def set_running_game(self):
+        if self.game_state == 'won':
+            print("Congratulations! You knocked your opponents' head off!")
+            self.ui.running_game = False
+        elif self.game_state == 'lost':
+            print('Oops, looks like your head got knocked off. ')
+            self.ui.running_game = False
+        elif self.game_state == 'exit':
+            print("Your opponent forfeited, you win!")
+            self.ui.running_game = False
+        else:
+            self.ui.running_game = True
 
     def timer_action(self):
         """

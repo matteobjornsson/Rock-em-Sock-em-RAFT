@@ -95,7 +95,7 @@ class Replica:
 		incoming_term = int(message['term'])
 		print('\n', self.id, ' received vote request from ', candidate, ': \n', message)
 		
-		if incoming_term >= self.current_term:
+		if incoming_term > self.current_term:
 			self.set_state_to_follower(incoming_term)
 			print('\n', self.id, ' greater term detected, reverting to follower')
 
@@ -179,7 +179,7 @@ class Replica:
 			self.messenger.send(request, peer)
 		
 
-	def startElection(self):
+	def start_election(self):
 		self.set_state_to_candidate()
 		print('\n', self.id, " started an election")
 		self.request_votes()

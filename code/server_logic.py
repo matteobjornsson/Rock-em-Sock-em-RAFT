@@ -33,24 +33,22 @@ class Server:
         Finally, message is sent to appropriate client.
         :return:
         """
-        print("update status")
         if received_msg['_id'] == 'client-red':
-            print("entered client red")
             self.server_logic.set_red_status(received_msg['state'])
-            if received_msg['state'] != 'exit':
+            if not received_msg['state'] == 'exit':
                 self.game_state, msg_to_send = self.server_logic.logic_after_commit(received_msg['_id'])
                 if self.consensus_module == 'leader':
                     self.messenger.send(msg_to_send, 'client-red')
-            elif received_msg['state'] == 'exit':
+            else:
                 msg_to_send = {'msg': 'exit'}
                 self.messenger.send(msg_to_send, 'client-blue')
         elif received_msg['_id'] == 'client-blue':
             self.server_logic.set_blue_status(received_msg['state'])
-            if received_msg['state'] != 'exit':
+            if not received_msg['state'] == 'exit':
                 self.game_state, msg_to_send = self.server_logic.logic_after_commit(received_msg['_id'])
                 if self.consensus_module == 'leader':
                     self.messenger.send(msg_to_send, 'client-blue')
-            elif received_msg['state'] == 'exit':
+            else:
                 msg_to_send = {'msg': 'exit'}
                 self.messenger.send(msg_to_send, 'client-red')
 

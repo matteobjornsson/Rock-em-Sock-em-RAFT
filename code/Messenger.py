@@ -1,7 +1,7 @@
 from time import sleep, clock
 from datetime import datetime
 from threading import Thread
-import boto3, random
+import boto3, botocore, random
 
 message_queue_URLs = {
     '0': 'https://sqs.us-east-1.amazonaws.com/622058021374/0.fifo', 
@@ -64,6 +64,7 @@ class Messenger:
         target class via the target.handle_incoming_message(message) interface
         '''
         while True:
+            sleep(.1)
             # response stores results of receive call from SQS
             response = self.sqs.receive_message(
                 QueueUrl=self.incoming_queue_URL,
@@ -81,10 +82,13 @@ class Messenger:
             # this receipt handle is required to delete the  message from queue
             receipt_handle = response['Messages'][0]['ReceiptHandle']
             # delete the message after receiving
-            self.sqs.delete_message(
-                QueueUrl=self.incoming_queue_URL,
-                ReceiptHandle=receipt_handle
-            )
+            try:
+                self.sqs.delete_message(
+                    QueueUrl=self.incoming_queue_URL,
+                    ReceiptHandle=receipt_handle
+                )
+            except botocore.exceptions.ClientError: 
+                print("Receipt Handle Expired")
             # print('\n',self.id,' Received and deleted message : \n\"{}\"'.format(message))
 
             # this calls on the holding class to handle the messages,
@@ -119,7 +123,7 @@ class Messenger:
         timestamp = str(datetime.now()) 
 
         message_body = 'Message # {} from {}. {}'.format(self.msg_count, self.id, timestamp)
-        
+        print("message from {} to {}: ".format(self.id, destination), message)
         SQSmsg = self.format_for_SQS(message)
         
         # response stores confirmation data from SQS

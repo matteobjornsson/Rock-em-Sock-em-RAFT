@@ -1,7 +1,5 @@
-from code.Server.server_logic import *
-from code.Robot.robot_logic import *
+from code.robot_logic import *
 import unittest
-from moto import mock_sqs
 
 
 class TestServerMethods(unittest.TestCase):

@@ -70,13 +70,13 @@ class ConsensusModule:
 		''' Set the consensus module election state to 'follower', reset variables. 
 		:param term: int, included for when an incoming term is discovered greater than own. 
 		'''
-		print('\n', self.id, ' Set state to follower')
 		self.election_state = 'follower'
 		self.term = term # update term to newly discovered term
 		self.vote_count = 0 # followers do not have votes, reset to 0
 		self.voted_for = 'null' # a new follwer has yet to vote for another peer
 		self.election_timer.restart_timer() # reset election countdown
 		self.heartbeat.stop_timer() # stop the heartbeat, only leaders send them
+		print('\n', self.id, ' Set state to follower, setting term to: ', self.term)
 	
 	def set_leader(self):
 		'''Set the consensus module election state to 'leader', change timers '''
@@ -148,17 +148,18 @@ class ConsensusModule:
 		incoming_term = int(message['term'])
 
 		print('\n', self.id, ' received append entry request from ', leader, ': \n',  message)
-
+		if (incoming_term == self.term and self.election_state == 'follower'):
+			self.election_timer.restart_timer()
 		if (incoming_term > self.term or 
 			(incoming_term == self.term and self.election_state == 'candidate')): 
 			self.set_follower(incoming_term) # set state to follower
 			print(self.id, ' greater term/leader detected, setting state to follower.')
 
-		# TODO: more logic required here to properly apply entries and respond
-		reply = self.make_message('reply to append request')
-		self.messenger.send(reply, leader)
-		
-		print('\n', self.id, ' replied to append request')
+			# TODO: more logic required here to properly apply entries and respond
+			reply = self.make_message('reply to append request')
+			self.messenger.send(reply, leader)
+			
+			print('\n', self.id, ' replied to append request')
 
 
 
@@ -169,10 +170,15 @@ class ConsensusModule:
 		and try again. 
 		'''
 		follower = message['senderID']
-		success = message['success']
+		incoming_term = int(message['term'])
+		if (incoming_term > self.term or 
+			(incoming_term == self.term and self.election_state == 'candidate')): 
+			self.set_follower(incoming_term) # set state to follower
+			print(self.id, ' greater term/leader detected, setting state to follower.')
+		#success = message['success']
 		# TODO: process receive logic. 
 
-		print('\n', self.id, ' received append entries reply :', follower, ': ', success)
+		print('\n', self.id, ' received append entries reply :', message)
 
 
 	def receive_vote_request(self, message: dict):
@@ -204,11 +210,13 @@ class ConsensusModule:
 		vote_granted = message['voteGranted'] #store value of vote received
 		sender = message['senderID']
 		print(self.id, ' received vote reply: ', vote_granted, ' from ', sender)
+
 		if self.election_state == 'candidate':
 			self.reply_status[sender] = True # mark sender as having replied
 			if vote_granted == 'True':
 				self.vote_count += 1
 				print('\n', self.id, ' vote count = ', self.vote_count)
+			print('votes needed: ',math.floor(len(self.peers)/2)+1)
 			if self.vote_count > math.floor(len(self.peers)/2):
 				self.set_leader()
 				print('\n', self.id, ' majority votes acquired')
