@@ -6,6 +6,13 @@ from time import sleep, clock
 from threading import Thread
 import boto3, argparse, random, math
 
+class log_entry:
+	def __init__(self, term: int, command: str):
+		self.term = term
+		self.command = command
+	
+	''' log is append only, index = position in list . need a way to reference log'''
+
 class ConsensusModule:
 	''' Constructor. Takes id of node (str) and number of peers (int) as input.
 	:param id: string. id from list '0', '1', '2', '3', '4'
