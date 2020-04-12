@@ -4,7 +4,7 @@ from Messenger import Messenger
 
 from time import sleep, clock
 from threading import Thread
-import boto3, argparse, random, math, csv, ast, os
+import boto3, argparse, random, math, csv, ast, os, re
 import numpy as np
 
 class LogEntry:
@@ -15,6 +15,10 @@ class LogEntry:
 
 	def __str__(self):
 		return str(self.term) + '\t' + self.command
+		
+	def from_string(self, _str: str):
+		values = re.split(r'\t+',_str)
+		return LogEntry(int(values[0]), values[1])
 
 	''' log is append only, index = position in list . need a way to reference log'''
 
@@ -44,6 +48,12 @@ class Log:
 		if not os.path.isdir('../files'):
 			os.mkdir('../files')
 		self.file_path = f'../files/logOutput{nodeID}.tsv'
+		
+		try:
+			os.remove(self.file_path)
+		except:
+			pass
+
 		try:
 			with open(self.file_path, 'r') as read_file:
 				csv_reader = csv.reader(read_file, delimiter='\t')
@@ -57,7 +67,7 @@ class Log:
 				log_writer = csv.writer(out_file, delimiter='\t')
 				log_writer.writerow(self.header)
 			# this might break things later, but something needs to exist at log[0]
-			self.log.append(None)
+			self.log.append(LogEntry(0,'null'))
 
 	def read_log_line(self, line):
 		"""
@@ -73,6 +83,13 @@ class Log:
 			return self.log[idx]
 		except IndexError:
 			print(f"There is no entry at index {idx:d} in the log.")
+
+	def idx_exist(self, idx):
+		try:
+			id = self.log[idx]
+			return True
+		except IndexError:
+			return False
 
 	def append_to_end(self, logentry: LogEntry):
 		"""
@@ -94,6 +111,23 @@ class Log:
 		for i in range(idx, len(self.log)):
 			to_delete.append(i)
 		self.log = np.delete(self.log, to_delete).tolist()
+
+	def get_entries_string(self, idx: int) -> str:
+		entries = ''
+		for i in range(idx, len(self.log)):
+			entries += str(self.get_entry(i)) + ','
+		entries = entries.strip(',')
+		return entries
+
+	def parse_entries_to_list(self, entries: str) -> list:
+		if entries == 'heartbeat':
+			return []
+		else:
+			split_strings = entries.split(',')
+			entry_list= []
+			for entry in split_strings:
+				entry_list.append(LogEntry.from_string(LogEntry, entry))
+			return entry_list
 
 
 
@@ -180,14 +214,19 @@ class ConsensusModule:
 		self.reset_next_and_match()
 
 	def reset_next_and_match(self):
+			print("lenght of log: ", len(self.log))
 			self.nextIndex = dict.fromkeys(self.peers, len(self.log))
 			self.matchIndex = dict.fromkeys(self.peers, 0)
 
 	def send_heartbeat(self):
-		'''Make a heartbeat message and send it to all peers. Used by leader'''
-		heartbeat = self.make_message('heartbeat')
-		print('Append entries: ', heartbeat)
+		'''Make a heartbeat message and send it to all peers. Used by leader'''	
 		for peer in self.peers:  # send to peers
+			# TODO: generate entries each peer needs. pass entries to message maker as string
+			entries_string = self.log.get_entries_string(self.nextIndex[peer])
+			if not entries_string:
+				entries_string = 'heartbeat'
+			heartbeat = self.make_message('heartbeat', entries=entries_string)
+			print('Append entries: ', heartbeat)
 			self.messenger.send(heartbeat, peer)
 
 	def start_election(self):  # this is equivalent to "set_candidate()"
@@ -245,22 +284,57 @@ class ConsensusModule:
 		more details to follow later'''
 		leader = message['leaderID']
 		incoming_term = int(message['term'])
-		entries = message['entries']
+		print("****HEREHEREHRER ***", message['entries'])
+		entries = self.log.parse_entries_to_list(message['entries'])
 
+		leaderCommit = int(message['leaderCommit'])
+		prevLogIndex = int(message['prevLogIndex'])
+		prevLogTerm = int(message['prevLogTerm'])
+		prevLogCommand = message['prevLogCommand']
+		# special scenario for converting to follower: 
 		if incoming_term == self.term and self.election_state == 'candidate':
 			self.set_follower(incoming_term)
 			print(self.id, ' leader of greater or equal term detected as candidate, setting state to follower.')
-
+		
+		# reset election timer
 		print('\n', self.id, ' received append entry request from ', leader, ': \n',  message)
 		if (incoming_term == self.term and self.election_state == 'follower'):
 			self.election_timer.restart_timer()
 
+
 		
-		# TODO: more logic required here to properly apply entries and respond
-		reply = self.make_message('reply to append request')
+
+
+		success, match = self.process_AppendRPC(entries, leaderCommit, 
+									prevLogIndex, prevLogTerm, prevLogCommand)
+
+		reply = self.make_message('reply to append request', 'leader', success)
 		self.messenger.send(reply, leader)
 			
 		print('\n', self.id, ' replied to append request')
+
+	def process_AppendRPC(self, entries: list, leaderCommit: int, prevLogIndex: int,
+								prevLogTerm: int, prevLogCommand: str)-> (bool, int):
+		# if logs are inconsistent or out of term, reply false
+		if (not self.log.idx_exist(prevLogIndex) 
+			or self.log.get_entry(prevLogIndex).term != self.term
+			or self.log.get_entry(prevLogIndex).command != prevLogCommand):
+			return False, 0
+		# otherwise, check if outdated entry exists in initial append spot. 
+		# if so, delete that entry and all following
+		else:
+			if self.log.idx_exist(prevLogIndex+1):
+				self.log.rollback(prevLogIndex+1)
+			# Append the new entries to the log
+			for entry in entries:
+				self.log.append_to_end(entry)
+			#update the commit index of this server, equal to leader or last applied
+			# whichever is smaller
+			if leaderCommit > self.commitIndex:
+				self.commitIndex = min(leaderCommit, len(self.log)-1)
+			# return True and tell leader index of last applied to update match
+			return True, len(self.log)-1
+
 
 
 	def receive_append_entry_reply(self, message: dict):
@@ -284,13 +358,14 @@ class ConsensusModule:
 				self.matchIndex[follower] = incoming_match
 				self.nextIndex[follower] = incoming_match + 1
 			else: # follower is not up to date, decrement index for next time
-				self.nextIndex[follower] -= 1
+				if self.nextIndex[follower] > 1: # next index should never be less than 1
+					self.nextIndex[follower] -= 1
 
 			#############################
 			# Commit available entries: #
 			#############################
 			N = self.commitIndex + 1
-			if len(self.log) > N: # if an entry exists to commit
+			if self.log.idx_exist(N): # if an entry exists to commit
 
 				# collect the number of peers that have replicated entry N
 				match_count = 0
@@ -329,7 +404,11 @@ class ConsensusModule:
 			self.voted_for = candidate
 			print('\n', self.id, ' voted for ', self.voted_for)
 
-		reply = self.make_message('reply to vote request', candidate)
+		voteGranted = False
+		if self.voted_for == candidate:
+			voteGranted = True
+
+		reply = self.make_message('reply to vote request', voteGranted)
 		self.messenger.send(reply, candidate)
 		print('\n', self.id, ' replied ', reply['voteGranted'], ' to ', candidate, ' request for votes')
 
@@ -349,7 +428,7 @@ class ConsensusModule:
 				self.set_leader()
 				print('\n', self.id, ' majority votes acquired')
 
-	def make_message(self, message_type: str, destination: str = '', entries: str = '[]') -> dict:
+	def make_message(self, message_type: str, success: bool = False, entries: str = '[]') -> dict:
 		'''
 		options: 'heartbeat', 'reply to append request', 'request votes', 
 		'reply to vote request'. returns a dictionary
@@ -361,17 +440,18 @@ class ConsensusModule:
 				'leaderID': 	self.id,
 				'term': 		str(self.term),
 				'entries'		:	entries,
-				#'prevLogIndex' : 'self.prevLogIndex',
-				#'prevLogTerm' : 'self.prevLogTerm',
-				#'leaderCommit' : 'self.commitIndex'
+				'prevLogIndex' : str(len(self.log)-1),
+				'prevLogTerm' : str(self.log.get_entry(-1).term),
+				'prevLogCommand': str(self.log.get_entry(-1).command),
+				'leaderCommit' : str(self.commitIndex)
 			}
 		elif message_type == 'reply to append request':
 			message = {
 				'messageType':	'AppendReply',
 				'senderID':		self.id,
 				'term':			str(self.term),
-				'match':	str(len(self.log)-1), #return index of last appended entry if true
-				'success' : 	'True'
+				'match':		str(len(self.log)-1), #return index of last appended entry if true
+				'success' : 	str(success)
 			}
 		elif message_type == 'request votes':
 			message = {
@@ -382,15 +462,11 @@ class ConsensusModule:
 				#'lastLogTerm': {'value': self.lastLogTerm}
 			}
 		elif message_type == 'reply to vote request':
-			voteGranted = 'False'
-			if self.voted_for == destination:
-				voteGranted = 'True'
-
 			message = {
 				'messageType': 	'VoteReply',
 				'senderID':		self.id,
 				'term':			str(self.term),
-				'voteGranted':	voteGranted
+				'voteGranted':	str(success)
 			}
 		else:
 			print('you fucked up')
@@ -406,7 +482,7 @@ class ConsensusModule:
 
 		header1 = "log:"
 		for x in range(0, 10): #len(self.log.log)
-			header1 += '\t' + str(x)
+			header1 += '\t ' + str(x)
 		header1 += '\n'
 
 		log = ''
@@ -420,9 +496,9 @@ class ConsensusModule:
 				peerStatus += peer
 				match = self.matchIndex[peer]
 				next = self.nextIndex[peer]
-				mtab = '\t'*(match+2)
-				ntab = '\t'*(next - match + 2)
-				peerStatus += mtab + '*' + ntab + '^\n'+ 'Next: '+ str(next) + ' Match: ' + str(match) + '\n'
+				mtab = '\t'*(match+1)
+				ntab = '\t'*(next - match)
+				peerStatus += mtab + ' *' + ntab + ' ^\n'+ 'Match: ' + str(match) + ' Next: '+ str(next) +'\n'
 
 		status = (node + term + commitIndex + electionState+ votedFor + 
 				voteCount+ header1 + log + peerStatus)
