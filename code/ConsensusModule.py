@@ -151,6 +151,7 @@ class ConsensusModule:
 
 		self.nextIndex = None
 		self.matchIndex = None
+		self.reset_next_and_match()
 
 		self.messenger = Messenger(self.id, self)
 		self.election_timer = Election_Timer(self.timer_length, self)
@@ -404,7 +405,7 @@ class ConsensusModule:
 		voteCount = f"Vote Count:\t{str(self.vote_count)}\n\n"
 
 		header1 = "log:"
-		for x in range(0, len(self.log.log)):
+		for x in range(0, 10): #len(self.log.log)
 			header1 += '\t' + str(x)
 		header1 += '\n'
 
@@ -421,7 +422,7 @@ class ConsensusModule:
 				next = self.nextIndex[peer]
 				mtab = '\t'*(match+2)
 				ntab = '\t'*(next - match + 2)
-				peerStatus += mtab + '*' + ntab + '^\n'
+				peerStatus += mtab + '*' + ntab + '^\n'+ 'Next: '+ str(next) + ' Match: ' + str(match) + '\n'
 
 		status = (node + term + commitIndex + electionState+ votedFor + 
 				voteCount+ header1 + log + peerStatus)
