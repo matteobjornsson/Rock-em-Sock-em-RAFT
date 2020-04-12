@@ -471,6 +471,14 @@ class ConsensusModule:
 		else:
 			print('you fucked up')
 		return message
+
+	def add_client_command_to_log(self, command: str):
+		self.log.append_to_end(LogEntry(self.term, command))
+
+	def get_command(self, idx)-> dict:
+		command_str = self.log.get_entry(idx)
+		command = ast.literal_eval(command_str)
+		return command
 	
 	def simulation_print(self):
 		node = f"Node:\t\t{self.id}\n"
