@@ -130,6 +130,14 @@ class ConsensusModule:
 		
 	def handle_incoming_message(self, message: dict):
 		message_type = message['messageType']
+		incoming_term = message['term']
+		if (
+			incoming_term > self.term or 
+			(incoming_term == self.term and self.election_state == 'candidate')
+		):
+			self.set_follower()
+			print(self.id, ' greater term/leader detected, setting state to follower.')
+		
 		print('\n********* You Have Passed A message Back to CM: {} *****\n'.format(message))
 		if message_type == 'AppendEntriesRPC':
 			self.receive_append_entry_request(message)
@@ -157,16 +165,13 @@ class ConsensusModule:
 		print('\n', self.id, ' received append entry request from ', leader, ': \n',  message)
 		if (incoming_term == self.term and self.election_state == 'follower'):
 			self.election_timer.restart_timer()
-		if (incoming_term > self.term or 
-			(incoming_term == self.term and self.election_state == 'candidate')): 
-			self.set_follower(incoming_term) # set state to follower
-			print(self.id, ' greater term/leader detected, setting state to follower.')
 
-			# TODO: more logic required here to properly apply entries and respond
-			reply = self.make_message('reply to append request')
-			self.messenger.send(reply, leader)
+		
+		# TODO: more logic required here to properly apply entries and respond
+		reply = self.make_message('reply to append request')
+		self.messenger.send(reply, leader)
 			
-			print('\n', self.id, ' replied to append request')
+		print('\n', self.id, ' replied to append request')
 
 
 
@@ -239,6 +244,7 @@ class ConsensusModule:
 				'messageType': 	'AppendEntriesRPC',
 				'leaderID': 	self.id,
 				'term': 		str(self.term)
+				#'entries'		:	[],
 				#'prevLogIndex' : 'self.prevLogIndex',
 				#'prevLogTerm' : 'self.prevLogTerm',
 				#'leaderCommit' : 'self.commitIndex'

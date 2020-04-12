@@ -160,6 +160,7 @@ if __name__ == '__main__':
 		'messageType' : 'AppendEntriesRPC',
 		'leaderId': self.id
 		'term'  : str(self.current_term),
+		'entries': [],
 		'prevLogIndex' : 'self.prevLogIndex',
 		'prevLogTerm' : 'self.prevLogTerm',
 		'leaderCommit' : 'self.commitIndex'
