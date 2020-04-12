@@ -1,0 +1,72 @@
+receive AppendRPC: 
+	if follower and same term:
+		reset election timer
+	
+	success = process_AppendRPC()
+
+	reply = makeMessage(success, matchIndex for self)
+
+	send reply to leader. 
+
+process_AppendRPC -> bool, MatchIndex:
+
+	if incoming term < self.term:
+		return False #? what? why reply at all? 
+
+	#where should this step go? 
+	if entry at previousLogIndex is empty or not same term:
+		return false, MatchIndex = 0
+
+	for each incoming log entry, starting at smallest index:
+		if existing entry conflicts with incoming entry at same index:
+			delete existing entry and all following entries.
+		
+		append incoming entry to log. 
+
+	if incoming commit index > self.commitIndex:
+		self.commitIndex = min(incoming commit index, index of last applied entry)
+
+
+	else:
+		# this should only return true if effectively the follower log is idential to leader log up through these new entries. 
+		return true, MatchIndex = index of last applied entry
+
+receive appendRPC_REPLY:
+
+	IF LEADER:
+	if reply == TRUE:
+		
+		match[follower] = matchIndex from follower message
+		nextIndex[follower] = match[follower] + 1
+
+	if reply == FALSE:
+		nextIndex[follower] -= 1
+		retry AppendRPC
+
+	check if we can increment commit index:
+		N = self.commitIndex+1
+		# check if we have a new log entry to commit
+		if log[N] is not empty && log[N].term == current term && count of matchIndex[peer] >= N + 1 / #peers = majority:
+			self.commitIndex = N
+			
+	
+Send Hearbeat:
+	for each follower:
+		entries = []
+		# if follower is ready to append entries, send new entries
+		if matchIndex[Follower] + 1 == nextIndex[follower]:
+			next = nextIndex[follower]
+			entries = self.log.get_entries(next)
+
+		send hearbeat with str(entries) and other terms (nextIndex, etc)
+
+log.get_entries_to_append(self, index: int) -> list	
+	entries = []
+	while log[index] not empty:
+		entries.append(str(log[next]))
+		index += 1
+	return entries
+		
+reset to leader:
+	self.nextIndex = last log index +1
+	self.matchIndex = 0

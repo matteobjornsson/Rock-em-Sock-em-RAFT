@@ -68,7 +68,7 @@ class Log:
 	def __len__(self):
 		return len(self.log)
 
-	def get_entry(self, idx):
+	def get_entry(self, idx) -> LogEntry:
 		try:
 			return self.log[idx]
 		except IndexError:
@@ -135,7 +135,7 @@ class ConsensusModule:
 	def __init__(self, id: str, peer_count: int):
 		# The following three variables need to survive on persistent storage.
 		self.voted_for = 'null'
-		self.log = []
+		self.log = Log()
 		self.term = 0
 
 		# volitile variables:
@@ -179,7 +179,7 @@ class ConsensusModule:
 		self.reset_next_and_match()
 
 	def reset_next_and_match(self):
-			self.nextIndex = dict.fromkeys(self.peers, len(self.log)+1)
+			self.nextIndex = dict.fromkeys(self.peers, len(self.log))
 			self.matchIndex = dict.fromkeys(self.peers, 0)
 
 	def send_heartbeat(self):
@@ -268,14 +268,40 @@ class ConsensusModule:
 		and matchIndex for follower. If failed, decrement nextIndex for follower
 		and try again. 
 		'''
-		follower = message['senderID']
+	
 		incoming_term = int(message['term'])
-		if (incoming_term > self.term or
-				(incoming_term == self.term and self.election_state == 'candidate')):
+		if incoming_term > self.term:
 			self.set_follower(incoming_term)  # set state to follower
 			print(self.id, ' greater term/leader detected, setting state to follower.')
-		# success = message['success']
-		# TODO: process receive logic.
+
+		follower = message['senderID']
+		success = bool(message['success'])
+		incoming_match = int(message['match'])
+		# only do the following if we are currently leader. 
+		if self.election_state == 'leader':
+			if success: # follower is up to date
+				self.matchIndex[follower] = incoming_match
+				self.nextIndex[follower] = incoming_match + 1
+			else: # follower is not up to date, decrement index for next time
+				self.nextIndex[follower] -= 1
+
+			#############################
+			# Commit available entries: #
+			#############################
+			N = self.commitIndex + 1
+			if len(self.log) > N: # if an entry exists to commit
+
+				# collect the number of peers that have replicated entry N
+				match_count = 0
+				for peer in self.peers: 
+					if self.matchIndex[peer] >= N:
+						match_count += 1 
+				
+				if (self.log.get_entry(N).term == self.term 
+						and match_count > math.floor(len(self.peers) / 2)):
+					# if that entry is the correct term, and if a majority of 
+					# servers have replicated that entry, commit that entry. 
+					self.commitIndex = N
 
 		print('\n', self.id, ' received append entries reply :', message)
 
@@ -342,8 +368,9 @@ class ConsensusModule:
 			message = {
 				'messageType':	'AppendReply',
 				'senderID':		self.id,
-				'term':			str(self.term)
-				#'success' : {'value': 'True'}
+				'term':			str(self.term),
+				'match':	str(len(self.log)-1), #return index of last appended entry if true
+				'success' : 	'True'
 			}
 		elif message_type == 'request votes':
 			message = {
