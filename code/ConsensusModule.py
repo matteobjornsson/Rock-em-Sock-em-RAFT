@@ -395,7 +395,41 @@ class ConsensusModule:
 			print('you fucked up')
 		return message
 	
+	def simulation_print(self):
+		node = f"Node:\t\t{self.id}\n"
+		term = f"Term:\t\t{str(self.term)}\n"
+		commitIndex = f"Commit Index:\t{str(self.commitIndex)}\n"
+		electionState = f"Election State:\t{self.election_state}\n"
+		votedFor = f"Voted For:\t{self.voted_for}\n"
+		voteCount = f"Vote Count:\t{str(self.vote_count)}\n\n"
 
+		header1 = "log:"
+		for x in range(0, len(self.log.log)):
+			header1 += '\t' + str(x)
+		header1 += '\n'
+
+		log = ''
+		for logEntry in self.log.log:
+			log += '\t' + '.' + str(logEntry.term)  + '.'
+		log += '\n'
+
+		peerStatus = ''
+		if self.election_state == 'leader':
+			for peer in self.peers:
+				peerStatus += peer
+				match = self.matchIndex[peer]
+				next = self.nextIndex[peer]
+				mtab = '\t'*(match+2)
+				ntab = '\t'*(next - match + 2)
+				peerStatus += mtab + '*' + ntab + '^\n'
+
+		status = (node + term + commitIndex + electionState+ votedFor + 
+				voteCount+ header1 + log + peerStatus)
+		
+		file = open(f"../files/status{self.id}.txt", 'w')
+		file.write(status)
+		file.close()
+		
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Messenger Utility')
 	parser.add_argument('id', help='id', type=str)
