@@ -16,7 +16,7 @@ class LogEntry:
 	def __str__(self):
 		return str(self.term) + '\t' + self.command
 		
-	def from_string(self, _str):
+	def from_string(self, _str: str):
 		values = re.split(r'\t+',_str)
 		return LogEntry(int(values[0]), values[1])
 
@@ -67,7 +67,7 @@ class Log:
 				log_writer = csv.writer(out_file, delimiter='\t')
 				log_writer.writerow(self.header)
 			# this might break things later, but something needs to exist at log[0]
-			self.log.append(LogEntry(0,''))
+			self.log.append(LogEntry(0,'null'))
 
 	def read_log_line(self, line):
 		"""
@@ -111,6 +111,23 @@ class Log:
 		for i in range(idx, len(self.log)):
 			to_delete.append(i)
 		self.log = np.delete(self.log, to_delete).tolist()
+
+	def get_entries_string(self, idx: int) -> str:
+		entries = ''
+		for i in range(idx, len(self.log)):
+			entries += str(self.get_entry(i)) + ','
+		entries = entries.strip(',')
+		return entries
+
+	def parse_entries_to_list(self, entries: str) -> list:
+		if entries == 'heartbeat':
+			return []
+		else:
+			split_strings = entries.split(',')
+			entry_list= []
+			for entry in split_strings:
+				entry_list.append(LogEntry.from_string(LogEntry, entry))
+			return entry_list
 
 
 
@@ -202,11 +219,14 @@ class ConsensusModule:
 			self.matchIndex = dict.fromkeys(self.peers, 0)
 
 	def send_heartbeat(self):
-		'''Make a heartbeat message and send it to all peers. Used by leader'''
-		# TODO: generate entries each peer needs. pass entries to message maker as string
-		heartbeat = self.make_message('heartbeat')
-		print('Append entries: ', heartbeat)
+		'''Make a heartbeat message and send it to all peers. Used by leader'''	
 		for peer in self.peers:  # send to peers
+			# TODO: generate entries each peer needs. pass entries to message maker as string
+			entries_string = self.log.get_entries_string(self.nextIndex[peer])
+			if not entries_string:
+				entries_string = 'heartbeat'
+			heartbeat = self.make_message('heartbeat', entries=entries_string)
+			print('Append entries: ', heartbeat)
 			self.messenger.send(heartbeat, peer)
 
 	def start_election(self):  # this is equivalent to "set_candidate()"
@@ -264,14 +284,13 @@ class ConsensusModule:
 		more details to follow later'''
 		leader = message['leaderID']
 		incoming_term = int(message['term'])
-
-		entries = message['entries']
-		entries.strip('][').split(', ') 
-		print(type(entries), entries)
+		print("****HEREHEREHRER ***", message['entries'])
+		entries = self.log.parse_entries_to_list(message['entries'])
 
 		leaderCommit = int(message['leaderCommit'])
 		prevLogIndex = int(message['prevLogIndex'])
 		prevLogTerm = int(message['prevLogTerm'])
+		prevLogCommand = message['prevLogCommand']
 		# special scenario for converting to follower: 
 		if incoming_term == self.term and self.election_state == 'candidate':
 			self.set_follower(incoming_term)
@@ -282,19 +301,24 @@ class ConsensusModule:
 		if (incoming_term == self.term and self.election_state == 'follower'):
 			self.election_timer.restart_timer()
 
+
+		
+
+
 		success, match = self.process_AppendRPC(entries, leaderCommit, 
-												prevLogIndex, prevLogTerm)
+									prevLogIndex, prevLogTerm, prevLogCommand)
 
 		reply = self.make_message('reply to append request', 'leader', success)
-		self.messenger.send(success, leader)
+		self.messenger.send(reply, leader)
 			
 		print('\n', self.id, ' replied to append request')
 
-	def process_AppendRPC(self, entries: str, leaderCommit: int, prevLogIndex: int,
-								prevLogTerm: int)-> (bool, int):
+	def process_AppendRPC(self, entries: list, leaderCommit: int, prevLogIndex: int,
+								prevLogTerm: int, prevLogCommand: str)-> (bool, int):
 		# if logs are inconsistent or out of term, reply false
 		if (not self.log.idx_exist(prevLogIndex) 
-			or self.log.get_entry(prevLogIndex).term != self.term):
+			or self.log.get_entry(prevLogIndex).term != self.term
+			or self.log.get_entry(prevLogIndex).command != prevLogCommand):
 			return False, 0
 		# otherwise, check if outdated entry exists in initial append spot. 
 		# if so, delete that entry and all following
@@ -418,6 +442,7 @@ class ConsensusModule:
 				'entries'		:	entries,
 				'prevLogIndex' : str(len(self.log)-1),
 				'prevLogTerm' : str(self.log.get_entry(-1).term),
+				'prevLogCommand': str(self.log.get_entry(-1).command),
 				'leaderCommit' : str(self.commitIndex)
 			}
 		elif message_type == 'reply to append request':
@@ -441,7 +466,7 @@ class ConsensusModule:
 				'messageType': 	'VoteReply',
 				'senderID':		self.id,
 				'term':			str(self.term),
-				'voteGranted':	success
+				'voteGranted':	str(success)
 			}
 		else:
 			print('you fucked up')
