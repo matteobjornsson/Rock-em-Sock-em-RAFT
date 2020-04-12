@@ -44,6 +44,12 @@ class Log:
 		if not os.path.isdir('../files'):
 			os.mkdir('../files')
 		self.file_path = f'../files/logOutput{nodeID}.tsv'
+		
+		try:
+			os.remove(self.file_path)
+		except:
+			pass
+
 		try:
 			with open(self.file_path, 'r') as read_file:
 				csv_reader = csv.reader(read_file, delimiter='\t')
@@ -57,7 +63,7 @@ class Log:
 				log_writer = csv.writer(out_file, delimiter='\t')
 				log_writer.writerow(self.header)
 			# this might break things later, but something needs to exist at log[0]
-			self.log.append(None)
+			self.log.append(LogEntry(0,''))
 
 	def read_log_line(self, line):
 		"""
@@ -180,6 +186,7 @@ class ConsensusModule:
 		self.reset_next_and_match()
 
 	def reset_next_and_match(self):
+			print("lenght of log: ", len(self.log))
 			self.nextIndex = dict.fromkeys(self.peers, len(self.log))
 			self.matchIndex = dict.fromkeys(self.peers, 0)
 
@@ -246,17 +253,21 @@ class ConsensusModule:
 		leader = message['leaderID']
 		incoming_term = int(message['term'])
 		entries = message['entries']
-
+		leaderCommit = int(message['leaderCommit'])
+		prevLogIndex = int(message['prevLogIndex'])
+		prevLogTerm = int(message['prevLogTerm'])
+		# special scenario for converting to follower: 
 		if incoming_term == self.term and self.election_state == 'candidate':
 			self.set_follower(incoming_term)
 			print(self.id, ' leader of greater or equal term detected as candidate, setting state to follower.')
-
+		
+		# reset election timer
 		print('\n', self.id, ' received append entry request from ', leader, ': \n',  message)
 		if (incoming_term == self.term and self.election_state == 'follower'):
 			self.election_timer.restart_timer()
 
-		
-		# TODO: more logic required here to properly apply entries and respond
+		self.process_AppendRPC(self, entries)
+
 		reply = self.make_message('reply to append request')
 		self.messenger.send(reply, leader)
 			
@@ -284,7 +295,8 @@ class ConsensusModule:
 				self.matchIndex[follower] = incoming_match
 				self.nextIndex[follower] = incoming_match + 1
 			else: # follower is not up to date, decrement index for next time
-				self.nextIndex[follower] -= 1
+				if self.nextIndex[follower] > 1: # next index should never be less than 1
+					self.nextIndex[follower] -= 1
 
 			#############################
 			# Commit available entries: #
@@ -361,9 +373,9 @@ class ConsensusModule:
 				'leaderID': 	self.id,
 				'term': 		str(self.term),
 				'entries'		:	entries,
-				#'prevLogIndex' : 'self.prevLogIndex',
-				#'prevLogTerm' : 'self.prevLogTerm',
-				#'leaderCommit' : 'self.commitIndex'
+				'prevLogIndex' : str(len(self.log)-1),
+				'prevLogTerm' : str(self.log.get_entry(-1).term),
+				'leaderCommit' : str(self.commitIndex)
 			}
 		elif message_type == 'reply to append request':
 			message = {
@@ -406,7 +418,7 @@ class ConsensusModule:
 
 		header1 = "log:"
 		for x in range(0, 10): #len(self.log.log)
-			header1 += '\t' + str(x)
+			header1 += '\t ' + str(x)
 		header1 += '\n'
 
 		log = ''
@@ -420,9 +432,9 @@ class ConsensusModule:
 				peerStatus += peer
 				match = self.matchIndex[peer]
 				next = self.nextIndex[peer]
-				mtab = '\t'*(match+2)
-				ntab = '\t'*(next - match + 2)
-				peerStatus += mtab + '*' + ntab + '^\n'+ 'Next: '+ str(next) + ' Match: ' + str(match) + '\n'
+				mtab = '\t'*(match+1)
+				ntab = '\t'*(next - match)
+				peerStatus += mtab + ' *' + ntab + ' ^\n'+ 'Match: ' + str(match) + ' Next: '+ str(next) +'\n'
 
 		status = (node + term + commitIndex + electionState+ votedFor + 
 				voteCount+ header1 + log + peerStatus)
