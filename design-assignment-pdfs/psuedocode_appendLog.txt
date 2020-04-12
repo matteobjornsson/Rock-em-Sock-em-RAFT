@@ -29,7 +29,7 @@ process_AppendRPC -> bool, MatchIndex:
 
 	else:
 		# this should only return true if effectively the follower log is idential to leader log up through these new entries. 
-		return true, MatchIndex = index of last applied entry
+		return true, MatchIndex = index of last appended entry
 
 receive appendRPC_REPLY:
 
