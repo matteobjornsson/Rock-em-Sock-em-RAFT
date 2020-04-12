@@ -30,7 +30,7 @@ class Log:
 
 	 '''
 
-	def __init__(self):
+	def __init__(self, nodeID: str):
 		"""
 		Log constructor
 		Attributes:
@@ -43,7 +43,7 @@ class Log:
 		self.logfile = ''
 		if not os.path.isdir('../files'):
 			os.mkdir('../files')
-		self.file_path = '../files/logOutput.tsv'
+		self.file_path = f'../files/logOutput{nodeID}.tsv'
 		try:
 			with open(self.file_path, 'r') as read_file:
 				csv_reader = csv.reader(read_file, delimiter='\t')
@@ -135,7 +135,7 @@ class ConsensusModule:
 	def __init__(self, id: str, peer_count: int):
 		# The following three variables need to survive on persistent storage.
 		self.voted_for = 'null'
-		self.log = Log()
+		self.log = Log(id)
 		self.term = 0
 
 		# volitile variables:
