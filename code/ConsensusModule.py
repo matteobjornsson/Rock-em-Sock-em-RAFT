@@ -20,11 +20,21 @@ class LogEntry:
 
 
 class Log:
+	''' 
+	*** public methods: *** 
+	
+	get_entry(index): get entry in log at index
+	rollback(index): delete entries after index
+	append_to_end(LogEntry): append log entry to log
+	print_log(): print log
+
+	 '''
+
 	def __init__(self):
 		"""
 		Log constructor
 		Attributes:
-		:var log: list of eventrecords
+		:var log: list of LogEntries
 		:var file_path: filepath to read and write from
 		"""
 
@@ -46,6 +56,8 @@ class Log:
 			with open(self.file_path, 'w+', newline='') as out_file:
 				log_writer = csv.writer(out_file, delimiter='\t')
 				log_writer.writerow(self.header)
+			# this might break things later, but something needs to exist at log[0]
+			self.log.append(None)
 
 	def read_log_line(self, line):
 		"""
@@ -137,12 +149,13 @@ class ConsensusModule:
 		self.commitIndex = 0
 		self.lastApplied = 0
 
-		self.nextIndex = {}
-		self.matchIndex = {}
+		self.nextIndex = None
+		self.matchIndex = None
 
 		self.messenger = Messenger(self.id, self)
 		self.election_timer = Election_Timer(self.timer_length, self)
 		self.heartbeat = Heartbeat(self.timer_length, self)
+
 
 	def set_follower(self, term: int):
 		''' Set the consensus module election state to 'follower', reset variables.
@@ -163,14 +176,16 @@ class ConsensusModule:
 		self.election_timer.stop_timer()  # pause the election timer, leader will remain leader
 		self.send_heartbeat()  # immediately send heartbeat to peers
 		self.heartbeat.restart_timer()  # continue sending heartbeat on interval
-		self.reply_status = {}
+		self.reset_next_and_match()
 
-	# TODO: more CM vars need to be reset here
+	def reset_next_and_match(self):
+			self.nextIndex = dict.fromkeys(self.peers, len(self.log)+1)
+			self.matchIndex = dict.fromkeys(self.peers, 0)
 
 	def send_heartbeat(self):
 		'''Make a heartbeat message and send it to all peers. Used by leader'''
 		heartbeat = self.make_message('heartbeat')
-		print(heartbeat)
+		print('Append entries: ', heartbeat)
 		for peer in self.peers:  # send to peers
 			self.messenger.send(heartbeat, peer)
 
@@ -196,19 +211,15 @@ class ConsensusModule:
 		request = self.make_message('request votes')
 		for peer, replied in self.reply_status.items(): # only send requests to those not replied already
 			if not replied:
-				
 				self.messenger.send(request, peer)
 				print(self.id, ' Requesting Vote from: ', peer, ' Term: ', self.term)
 		
 	def handle_incoming_message(self, message: dict):
 		message_type = message['messageType']
-		incoming_term = message['term']
-		if (
-			incoming_term > self.term or 
-			(incoming_term == self.term and self.election_state == 'candidate')
-		):
-			self.set_follower()
-			print(self.id, ' greater term/leader detected, setting state to follower.')
+		incoming_term = int(message['term'])
+		if (incoming_term > self.term):
+			self.set_follower(incoming_term)
+			print(self.id, ' greater term detected, setting state to follower.')
 		
 		print('\n********* You Have Passed A message Back to CM: {} *****\n'.format(message))
 		if message_type == 'AppendEntriesRPC':
@@ -233,6 +244,11 @@ class ConsensusModule:
 		more details to follow later'''
 		leader = message['leaderID']
 		incoming_term = int(message['term'])
+		entries = message['entries']
+
+		if incoming_term == self.term and self.election_state == 'candidate':
+			self.set_follower(incoming_term)
+			print(self.id, ' leader of greater or equal term detected as candidate, setting state to follower.')
 
 		print('\n', self.id, ' received append entry request from ', leader, ': \n',  message)
 		if (incoming_term == self.term and self.election_state == 'follower'):
@@ -279,7 +295,10 @@ class ConsensusModule:
 
 		# TODO: if candidate log shorter than self, reply false
 
-		if self.voted_for == 'null':  # && candidate log >= self:
+		if self.voted_for == 'null':  # && candidate log is at least as up to date as self:
+			# at least as up to date is defined as: 
+			# term of incoming last log entry is equal or greater than self. 
+			# if equal term, index of incoming last log entry is equal or greater than self. 
 			self.voted_for = candidate
 			print('\n', self.id, ' voted for ', self.voted_for)
 
@@ -303,7 +322,7 @@ class ConsensusModule:
 				self.set_leader()
 				print('\n', self.id, ' majority votes acquired')
 
-	def make_message(self, message_type: str, destination: str = '') -> dict:
+	def make_message(self, message_type: str, destination: str = '', entries: str = '[]') -> dict:
 		'''
 		options: 'heartbeat', 'reply to append request', 'request votes', 
 		'reply to vote request'. returns a dictionary
@@ -313,8 +332,8 @@ class ConsensusModule:
 			message = {
 				'messageType': 	'AppendEntriesRPC',
 				'leaderID': 	self.id,
-				'term': 		str(self.term)
-				#'entries'		:	[],
+				'term': 		str(self.term),
+				'entries'		:	entries,
 				#'prevLogIndex' : 'self.prevLogIndex',
 				#'prevLogTerm' : 'self.prevLogTerm',
 				#'leaderCommit' : 'self.commitIndex'

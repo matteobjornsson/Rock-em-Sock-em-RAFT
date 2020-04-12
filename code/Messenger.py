@@ -123,7 +123,7 @@ class Messenger:
 		timestamp = str(datetime.now())
 
 		message_body = 'Message # {} from {}. {}'.format(self.msg_count, self.id, timestamp)
-		print("message from {} to {}: ".format(self.id, destination), message)
+		#print("message from {} to {}: ".format(self.id, destination), message)
 		SQSmsg = self.format_for_SQS(message)
 
 		# response stores confirmation data from SQS
