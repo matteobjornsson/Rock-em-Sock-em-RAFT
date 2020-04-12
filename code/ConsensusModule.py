@@ -4,18 +4,90 @@ from Messenger import Messenger
 
 from time import sleep, clock
 from threading import Thread
-import boto3, argparse, random, math
+import boto3, argparse, random, math, csv, ast, os
+import numpy as np
 
-class log_entry:
+class LogEntry:
 	def __init__(self, term: int, command: str):
 		self.term = term
 		self.command = command
-	
+		self.iterable = [self.term, self.command]
+
+	def __str__(self):
+		return str(self.term) + '\t' + self.command
+
 	''' log is append only, index = position in list . need a way to reference log'''
 
+
+class Log:
+	def __init__(self):
+		"""
+		Log constructor
+		Attributes:
+		:var log: list of eventrecords
+		:var file_path: filepath to read and write from
+		"""
+
+		self.log = []
+		self.header = ["TERM", "COMMAND"]
+		self.logfile = ''
+		if not os.path.isdir('../files'):
+			os.mkdir('../files')
+		self.file_path = '../files/logOutput.tsv'
+		try:
+			with open(self.file_path, 'r') as read_file:
+				csv_reader = csv.reader(read_file, delimiter='\t')
+				next(csv_reader)
+				for line in csv_reader:
+					print(line)
+					self.log.append(self.read_log_line(line))
+
+		except FileNotFoundError:
+			with open(self.file_path, 'w+', newline='') as out_file:
+				log_writer = csv.writer(out_file, delimiter='\t')
+				log_writer.writerow(self.header)
+
+	def read_log_line(self, line):
+		"""
+		Reading a single line in a log
+		"""
+		return LogEntry(int(line[0]), line[1])
+
+	def __len__(self):
+		return len(self.log)
+
+	def get_entry(self, idx):
+		try:
+			return self.log[idx]
+		except IndexError:
+			print(f"There is no entry at index {idx:d} in the log.")
+
+	def append_to_end(self, logentry: LogEntry):
+		"""
+		Insert new log entry and add to file.
+		:type logentry: object LogEntry
+		"""
+		self.log.append(logentry)
+
+		with open(self.file_path, 'a', newline='') as out_file:
+			log_writer = csv.writer(out_file, delimiter='\t')
+			log_writer.writerow(logentry.iterable)
+
+	def print_log(self):
+		for x in self.log:
+			print(str(x))
+
+	def rollback(self, idx):
+		to_delete = []
+		for i in range(idx, len(self.log)):
+			to_delete.append(i)
+		self.log = np.delete(self.log, to_delete).tolist()
+
+
+
 class ConsensusModule:
-	''' Constructor. Takes id of node (str) and number of peers (int) as input.
-	:param id: string. id from list '0', '1', '2', '3', '4'
+	''' Constructor. Takes id of node (str) and number of peers (int) as
+
 	:param peer_count: int. number of peers in cluster. 
 
 	PERSISTENT STORAGE:
@@ -49,14 +121,14 @@ class ConsensusModule:
 	'''
 
 	def __init__(self, id: str, peer_count: int):
-		# The following three variables need to survive on persistent storage. 
+		# The following three variables need to survive on persistent storage.
 		self.voted_for = 'null'
 		self.log = []
 		self.term = 0
 
 		# volitile variables:
 		self.id = id
-		self.peers = [str(x) for x in range(0,peer_count) if x != int(self.id)]
+		self.peers = [str(x) for x in range(0, peer_count) if x != int(self.id)]
 		self.election_state = 'follower'
 		self.timer_length = 4
 		self.vote_count = 0
@@ -72,38 +144,38 @@ class ConsensusModule:
 		self.election_timer = Election_Timer(self.timer_length, self)
 		self.heartbeat = Heartbeat(self.timer_length, self)
 
-
 	def set_follower(self, term: int):
-		''' Set the consensus module election state to 'follower', reset variables. 
+		''' Set the consensus module election state to 'follower', reset variables.
 		:param term: int, included for when an incoming term is discovered greater than own. 
 		'''
 		self.election_state = 'follower'
-		self.term = term # update term to newly discovered term
-		self.vote_count = 0 # followers do not have votes, reset to 0
-		self.voted_for = 'null' # a new follwer has yet to vote for another peer
-		self.election_timer.restart_timer() # reset election countdown
-		self.heartbeat.stop_timer() # stop the heartbeat, only leaders send them
+		self.term = term  # update term to newly discovered term
+		self.vote_count = 0  # followers do not have votes, reset to 0
+		self.voted_for = 'null'  # a new follwer has yet to vote for another peer
+		self.election_timer.restart_timer()  # reset election countdown
+		self.heartbeat.stop_timer()  # stop the heartbeat, only leaders send them
 		print('\n', self.id, ' Set state to follower, setting term to: ', self.term)
-	
+
 	def set_leader(self):
 		'''Set the consensus module election state to 'leader', change timers '''
 		print('\n', self.id, ' Set state to leader')
-		self.election_state = 'leader' 
-		self.election_timer.stop_timer() # pause the election timer, leader will remain leader
-		self.send_heartbeat() # immediately send heartbeat to peers
-		self.heartbeat.restart_timer() # continue sending heartbeat on interval
+		self.election_state = 'leader'
+		self.election_timer.stop_timer()  # pause the election timer, leader will remain leader
+		self.send_heartbeat()  # immediately send heartbeat to peers
+		self.heartbeat.restart_timer()  # continue sending heartbeat on interval
 		self.reply_status = {}
-		# TODO: more CM vars need to be reset here
+
+	# TODO: more CM vars need to be reset here
 
 	def send_heartbeat(self):
 		'''Make a heartbeat message and send it to all peers. Used by leader'''
 		heartbeat = self.make_message('heartbeat')
 		print(heartbeat)
-		for peer in self.peers: # send to peers
+		for peer in self.peers:  # send to peers
 			self.messenger.send(heartbeat, peer)
-		
-	def start_election(self): # this is equivalent to "set_candidate()"
-		'''Set election state to 'candidate', vote for self, and request votes 
+
+	def start_election(self):  # this is equivalent to "set_candidate()"
+		'''Set election state to 'candidate', vote for self, and request votes
 		for leadership
 		'''
 		if self.election_state != 'candidate':
@@ -174,7 +246,6 @@ class ConsensusModule:
 		print('\n', self.id, ' replied to append request')
 
 
-
 	def receive_append_entry_reply(self, message: dict):
 		'''
 		This method processes replies from followers. If successful, update nextIndex
@@ -183,15 +254,14 @@ class ConsensusModule:
 		'''
 		follower = message['senderID']
 		incoming_term = int(message['term'])
-		if (incoming_term > self.term or 
-			(incoming_term == self.term and self.election_state == 'candidate')): 
-			self.set_follower(incoming_term) # set state to follower
+		if (incoming_term > self.term or
+				(incoming_term == self.term and self.election_state == 'candidate')):
+			self.set_follower(incoming_term)  # set state to follower
 			print(self.id, ' greater term/leader detected, setting state to follower.')
-		#success = message['success']
-		# TODO: process receive logic. 
+		# success = message['success']
+		# TODO: process receive logic.
 
 		print('\n', self.id, ' received append entries reply :', message)
-
 
 	def receive_vote_request(self, message: dict):
 		'''
@@ -203,33 +273,33 @@ class ConsensusModule:
 		incoming_term = int(message['term'])
 		print('\n', self.id, ' received vote request from ', candidate, ': \n')
 
-		if incoming_term > self.term: # as always, check for greater term, set to follower if true
-			self.set_follower(incoming_term) # set state to follower
+		if incoming_term > self.term:  # as always, check for greater term, set to follower if true
+			self.set_follower(incoming_term)  # set state to follower
 			print(self.id, ' greater term detected, setting state to follower.')
-		
+
 		# TODO: if candidate log shorter than self, reply false
 
-		if self.voted_for == 'null': #&& candidate log >= self:
+		if self.voted_for == 'null':  # && candidate log >= self:
 			self.voted_for = candidate
 			print('\n', self.id, ' voted for ', self.voted_for)
-		
+
 		reply = self.make_message('reply to vote request', candidate)
 		self.messenger.send(reply, candidate)
 		print('\n', self.id, ' replied ', reply['voteGranted'], ' to ', candidate, ' request for votes')
 
 	def receive_vote_reply(self, message: dict):
-		
-		vote_granted = message['voteGranted'] #store value of vote received
+
+		vote_granted = message['voteGranted']  # store value of vote received
 		sender = message['senderID']
 		print(self.id, ' received vote reply: ', vote_granted, ' from ', sender)
 
 		if self.election_state == 'candidate':
-			self.reply_status[sender] = True # mark sender as having replied
+			self.reply_status[sender] = True  # mark sender as having replied
 			if vote_granted == 'True':
 				self.vote_count += 1
 				print('\n', self.id, ' vote count = ', self.vote_count)
-			print('votes needed: ',math.floor(len(self.peers)/2)+1)
-			if self.vote_count > math.floor(len(self.peers)/2):
+			print('votes needed: ', math.floor(len(self.peers) / 2) + 1)
+			if self.vote_count > math.floor(len(self.peers) / 2):
 				self.set_leader()
 				print('\n', self.id, ' majority votes acquired')
 
@@ -281,9 +351,9 @@ class ConsensusModule:
 	
 
 if __name__ == '__main__':
-	parser =  argparse.ArgumentParser(description='Messenger Utility')
+	parser = argparse.ArgumentParser(description='Messenger Utility')
 	parser.add_argument('id', help='id', type=str)
-	#parser.add_argument('peerCount', help = 'peerCount', type=int)
+	# parser.add_argument('peerCount', help = 'peerCount', type=int)
 	args = parser.parse_args()
 
 	r = ConsensusModule(args.id, 5)
