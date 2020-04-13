@@ -80,6 +80,7 @@ class Log:
 
 	def get_entry(self, idx) -> LogEntry:
 		try:
+			print(self.log[idx])
 			return self.log[idx]
 		except IndexError:
 			print(f"There is no entry at index {idx:d} in the log.")
@@ -87,8 +88,10 @@ class Log:
 	def idx_exist(self, idx):
 		try:
 			id = self.log[idx]
+			print(f"index {idx:d} exists")
 			return True
 		except IndexError:
+			print(f"index {idx:d} does not")
 			return False
 
 	def append_to_end(self, logentry: LogEntry):
@@ -312,9 +315,18 @@ class ConsensusModule:
 	def process_AppendRPC(self, entries: list, leaderCommit: int, prevLogIndex: int,
 								prevLogTerm: int, prevLogCommand: str)-> (bool, int):
 		# if logs are inconsistent or out of term, reply false
-		if (not self.log.idx_exist(prevLogIndex) 
-			or self.log.get_entry(prevLogIndex).term != self.term
-			or self.log.get_entry(prevLogIndex).command != prevLogCommand):
+		if (not self.log.idx_exist(prevLogIndex) ):
+			print("no log entry at prev log index")
+		elif (self.log.get_entry(prevLogIndex).term != prevLogTerm):
+			print("previous log entry not same term as incoming")
+		elif (self.log.get_entry(prevLogIndex).command != prevLogCommand):
+			print("command at prev log index does not match incoming")
+
+		#reply false if log doesn’t contain an entry at prevLogIndexwhose 
+		# term matches prevLogTerm (§5.3)
+		if ((not self.log.idx_exist(prevLogIndex))
+			or (self.log.get_entry(prevLogIndex).term != prevLogTerm)
+			or (self.log.get_entry(prevLogIndex).command != prevLogCommand)):
 			return False, 0
 		# otherwise, check if outdated entry exists in initial append spot. 
 		# if so, delete that entry and all following
