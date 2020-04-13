@@ -223,6 +223,7 @@ class ConsensusModule:
 	def reset_next_and_match(self):
 			#print("lenght of log: ", len(self.log))
 			self.nextIndex = dict.fromkeys(self.peers, len(self.log))
+			print('nextIndex initialized to length of current log :', self.nextIndex)
 			self.matchIndex = dict.fromkeys(self.peers, 0)
 
 	def start_election(self):  # this is equivalent to "set_candidate()"
@@ -379,17 +380,21 @@ class ConsensusModule:
 			#############################
 			N = self.commitIndex + 1
 			if self.log.idx_exist(N): # if an entry exists to commit
-
+				print('log entry to be committed exists')
 				# collect the number of peers that have replicated entry N
 				match_count = 0
 				for peer in self.peers: 
 					if self.matchIndex[peer] >= N:
 						match_count += 1 
-				
+				print("match count: ", match_count, " log term: ", self.log.get_entry(N).term)
+				# If there exists an N such that N > commitIndex, a majority of 
+				# matchIndex[i] ≥ N, and log[N].term == currentTerm:
+				# set commitIndex = N (§5.3, §5.4).
 				if (self.log.get_entry(N).term == self.term 
-						and match_count > math.floor(len(self.peers) / 2)):
+						and match_count + 1 > math.floor(len(self.peers) / 2)):
 					# if that entry is the correct term, and if a majority of 
 					# servers have replicated that entry, commit that entry. 
+					print("increment commit index")
 					self.commitIndex = N
 
 		#print('\n', self.id, ' received append entries reply :', message)
@@ -495,7 +500,7 @@ class ConsensusModule:
 		self.log.append_to_end(LogEntry(self.term, command))
 
 	def get_command(self, idx)-> dict:
-		command_str = self.log.get_entry(idx)
+		command_str = self.log.get_entry(idx).command
 		command = ast.literal_eval(command_str)
 		return command
 	

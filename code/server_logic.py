@@ -25,6 +25,7 @@ class Server:
 
         self.log_checker = Thread(
             target=self.check_for_committed_commands,
+            name='Server: Check for new log entries to apply',
             daemon=True
         ).start()
 
@@ -120,8 +121,8 @@ class ServerLogic:
         """
         return_message = ''
         game_state = ''
-        print('blue is ', self.blue_status)
-        print('red is ', self.red_status)
+        #print('blue is ', self.blue_status)
+        #print('red is ', self.red_status)
         if msg_id == 'client-red':
             if (self.red_status == 'punch_right' and not self.blue_status == 'block_left') or (
                     self.red_status == 'punch_left' and not self.blue_status == 'block_right'):
