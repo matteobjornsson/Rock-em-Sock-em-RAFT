@@ -50,10 +50,10 @@ class Log:
 			os.mkdir('../files')
 		self.file_path = f'../files/logOutput{nodeID}.tsv'
 		
-		try:
-			os.remove(self.file_path)
-		except:
-			pass
+		#try:
+		#	os.remove(self.file_path)
+		#except:
+		#	pass
 
 		try:
 			with open(self.file_path, 'r') as read_file:
@@ -68,7 +68,7 @@ class Log:
 				log_writer = csv.writer(out_file, delimiter='\t')
 				log_writer.writerow(self.header)
 			# this might break things later, but something needs to exist at log[0]
-			self.log.append(LogEntry(0,'null'))
+			self.append_to_end(LogEntry(0,'null'))
 
 	def read_log_line(self, line):
 		"""
@@ -266,8 +266,10 @@ class ConsensusModule:
 		if (incoming_term > self.term):
 			self.set_follower(incoming_term)
 			#print(self.id, ' greater term detected, setting state to follower.')
-		
-		print('\n**** Message Received: {}\n'.format(message))
+		print(
+			'\n**** Message Received: {}\n'.format(message), " self term: ", 
+			self.term, " self state: ", self.election_state
+			)
 		if message_type == 'AppendEntriesRPC':
 			self.receive_append_entry_request(message)
 		elif message_type == 'AppendReply':
@@ -449,16 +451,18 @@ class ConsensusModule:
 		'''
 		if message_type == 'heartbeat':
 			prevLogIndex = self.nextIndex[destination]-1
+			print("make heartbeat. NextIndex: ", self.nextIndex[destination])
 			prevLog = self.log.get_entry(prevLogIndex)
 			message = {
 				'messageType': 	'AppendEntriesRPC',
 				'leaderID': 	self.id,
 				'term': 		str(self.term),
 				'entries'		:	entries,
-				'prevLogIndex' : str(prevLogIndex),
+				'prevLogIndex' : str(prevLogIndex), 
 				'prevLogTerm' : str(prevLog.term),
 				'prevLogCommand': str(prevLog.command),
-				'leaderCommit' : str(self.commitIndex)
+				'leaderCommit' : str(self.commitIndex),
+				'nextIndex' : str(self.nextIndex[destination])
 			}
 		elif message_type == 'reply to append request':
 			message = {
