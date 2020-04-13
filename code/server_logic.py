@@ -3,6 +3,7 @@ sys.path.append('..')
 from Messenger import Messenger
 from ConsensusModule import *
 from threading import Thread
+from time import sleep
 import random
 
 
@@ -15,16 +16,23 @@ class Server:
 
     def __init__(self, nodeID):
         self.id = nodeID
-        self.messenger = Messenger('leader', self)
+        self.messenger = Messenger(id='leader', target=self, run=False)
         self.game_state = ''
         self.log = ''
-        self.cm = ConsensusModule(self.id, 5)  # ConsensusModule() set to "leader" for testing purposes
+        self.cm = ConsensusModule(id=self.id, peer_count=5, server=self)  # ConsensusModule() set to "leader" for testing purposes
         self.server_logic = ServerLogic(self.cm)
         self.lastApplied = 0
+
         self.log_checker = Thread(
             target=self.check_for_committed_commands,
             daemon=True
         ).start()
+
+    def turn_on_leader_queue(self):
+        self.messenger.on()
+
+    def turn_off_leader_queue(self):
+        self.messenger.off()
 
     def check_for_committed_commands(self):
         while True:

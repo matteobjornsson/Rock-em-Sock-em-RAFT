@@ -59,7 +59,7 @@ class Log:
 				csv_reader = csv.reader(read_file, delimiter='\t')
 				next(csv_reader)
 				for line in csv_reader:
-					print(line)
+					#print(line)
 					self.log.append(self.read_log_line(line))
 
 		except FileNotFoundError:
@@ -80,7 +80,7 @@ class Log:
 
 	def get_entry(self, idx) -> LogEntry:
 		try:
-			print(self.log[idx])
+			#print(self.log[idx])
 			return self.log[idx]
 		except IndexError:
 			print(f"There is no entry at index {idx:d} in the log.")
@@ -88,10 +88,10 @@ class Log:
 	def idx_exist(self, idx):
 		try:
 			id = self.log[idx]
-			print(f"index {idx:d} exists")
+			#print(f"index {idx:d} exists")
 			return True
 		except IndexError:
-			print(f"index {idx:d} does not")
+			#print(f"index {idx:d} does not")
 			return False
 
 	def append_to_end(self, logentry: LogEntry):
@@ -169,7 +169,7 @@ class ConsensusModule:
 	:var .heartbeat:       Heartbeat. Timer thread to send hearbeats when leader. 
 	'''
 
-	def __init__(self, id: str, peer_count: int):
+	def __init__(self, id: str, peer_count: int, server: object):
 		# The following three variables need to survive on persistent storage.
 		self.voted_for = 'null'
 		self.log = Log(id)
@@ -177,6 +177,7 @@ class ConsensusModule:
 
 		# volitile variables:
 		self.id = id
+		self.server = server
 		self.peers = [str(x) for x in range(0, peer_count) if x != int(self.id)]
 		self.election_state = 'follower'
 		self.timer_length = 4
@@ -190,7 +191,7 @@ class ConsensusModule:
 		self.matchIndex = None
 		self.reset_next_and_match()
 
-		self.messenger = Messenger(self.id, self)
+		self.messenger = Messenger(self.id, self, run=True)
 		self.election_timer = Election_Timer(self.timer_length, self)
 		self.heartbeat = Heartbeat(self.timer_length, self)
 
@@ -205,41 +206,33 @@ class ConsensusModule:
 		self.voted_for = 'null'  # a new follwer has yet to vote for another peer
 		self.election_timer.restart_timer()  # reset election countdown
 		self.heartbeat.stop_timer()  # stop the heartbeat, only leaders send them
-		print('\n', self.id, ' Set state to follower, setting term to: ', self.term)
+		self.server.turn_off_leader_queue()
+		#print('\n', self.id, ' Set state to follower, setting term to: ', self.term)
 
 	def set_leader(self):
 		'''Set the consensus module election state to 'leader', change timers '''
-		print('\n', self.id, ' Set state to leader')
+		#print('\n', self.id, ' Set state to leader')
 		self.election_state = 'leader'
 		self.election_timer.stop_timer()  # pause the election timer, leader will remain leader
 		self.send_heartbeat()  # immediately send heartbeat to peers
 		self.heartbeat.restart_timer()  # continue sending heartbeat on interval
 		self.reset_next_and_match()
+		self.server.turn_on_leader_queue()
 
 	def reset_next_and_match(self):
-			print("lenght of log: ", len(self.log))
+			#print("lenght of log: ", len(self.log))
 			self.nextIndex = dict.fromkeys(self.peers, len(self.log))
 			self.matchIndex = dict.fromkeys(self.peers, 0)
-
-	def send_heartbeat(self):
-		'''Make a heartbeat message and send it to all peers. Used by leader'''	
-		for peer in self.peers:  # send to peers
-			# TODO: generate entries each peer needs. pass entries to message maker as string
-			entries_string = self.log.get_entries_string(self.nextIndex[peer])
-			if not entries_string:
-				entries_string = 'heartbeat'
-			heartbeat = self.make_message('heartbeat', entries=entries_string)
-			#print('Append entries: ', heartbeat)
-			self.messenger.send(heartbeat, peer)
 
 	def start_election(self):  # this is equivalent to "set_candidate()"
 		'''Set election state to 'candidate', vote for self, and request votes
 		for leadership
 		'''
-		if self.election_state != 'candidate':
-			print('\n', self.id, ' set state to candidate')
+		#if self.election_state != 'candidate':
+			# print('\n', self.id, ' set state to candidate')
 		self.heartbeat.stop_timer()
 		self.election_state = 'candidate'
+		self.server.turn_off_leader_queue()
 		self.term+= 1 # starting an election increments the term
 		self.voted_for = self.id # vote for self
 		self.vote_count = 1 # count of self vote
@@ -255,16 +248,26 @@ class ConsensusModule:
 		for peer, replied in self.reply_status.items(): # only send requests to those not replied already
 			if not replied:
 				self.messenger.send(request, peer)
-				print(self.id, ' Requesting Vote from: ', peer, ' Term: ', self.term)
+				#print(self.id, ' Requesting Vote from: ', peer, ' Term: ', self.term)
 		
+	def send_heartbeat(self):
+		'''Make a heartbeat message and send it to all peers. Used by leader'''	
+		for peer in self.peers:  # send to peers
+			entries_string = self.log.get_entries_string(self.nextIndex[peer])
+			if not entries_string:
+				entries_string = 'heartbeat'
+			heartbeat = self.make_message('heartbeat', entries=entries_string)
+			#print('Append entries: ', heartbeat)
+			self.messenger.send(heartbeat, peer)
+
 	def handle_incoming_message(self, message: dict):
 		message_type = message['messageType']
 		incoming_term = int(message['term'])
 		if (incoming_term > self.term):
 			self.set_follower(incoming_term)
-			print(self.id, ' greater term detected, setting state to follower.')
+			#print(self.id, ' greater term detected, setting state to follower.')
 		
-		print('\n********* You Have Passed A message Back to CM: {} *****\n'.format(message))
+		print('\n**** Message Received: {}\n'.format(message))
 		if message_type == 'AppendEntriesRPC':
 			self.receive_append_entry_request(message)
 		elif message_type == 'AppendReply':
@@ -287,7 +290,7 @@ class ConsensusModule:
 		more details to follow later'''
 		leader = message['leaderID']
 		incoming_term = int(message['term'])
-		print("****HEREHEREHRER ***", message['entries'])
+		#print("****HEREHEREHRER ***", message['entries'])
 		entries = self.log.parse_entries_to_list(message['entries'])
 
 		leaderCommit = int(message['leaderCommit'])
@@ -297,20 +300,20 @@ class ConsensusModule:
 		# special scenario for converting to follower: 
 		if incoming_term == self.term and self.election_state == 'candidate':
 			self.set_follower(incoming_term)
-			print(self.id, ' leader of greater or equal term detected as candidate, setting state to follower.')
+			#print(self.id, ' leader of greater or equal term detected as candidate, setting state to follower.')
 		
 		# reset election timer
-		print('\n', self.id, ' received append entry request from ', leader, ': \n',  message)
+		#print('\n', self.id, ' received append entry request from ', leader, ': \n',  message)
 		if (incoming_term == self.term and self.election_state == 'follower'):
 			self.election_timer.restart_timer()
 
 		success, match = self.process_AppendRPC(entries, leaderCommit, 
 									prevLogIndex, prevLogTerm, prevLogCommand)
-		print(success, match, '=================================')
+		#print(success, match, '=================================')
 		reply = self.make_message('reply to append request', success=success)
 		self.messenger.send(reply, leader)
 			
-		print('\n', self.id, ' replied to append request')
+		#print('\n', self.id, ' replied to append request')
 
 	def process_AppendRPC(self, entries: list, leaderCommit: int, prevLogIndex: int,
 								prevLogTerm: int, prevLogCommand: str)-> (bool, int):
@@ -322,7 +325,7 @@ class ConsensusModule:
 		elif (self.log.get_entry(prevLogIndex).command != prevLogCommand):
 			print("command at prev log index does not match incoming")
 
-		#reply false if log doesn’t contain an entry at prevLogIndexwhose 
+		#reply false if log doesn’t contain an entry at prevLogIndex whose 
 		# term matches prevLogTerm (§5.3)
 		if ((not self.log.idx_exist(prevLogIndex))
 			or (self.log.get_entry(prevLogIndex).term != prevLogTerm)
@@ -331,8 +334,8 @@ class ConsensusModule:
 		# otherwise, check if outdated entry exists in initial append spot. 
 		# if so, delete that entry and all following
 		else:
-			if self.log.idx_exist(prevLogIndex+1):
-				self.log.rollback(prevLogIndex+1)
+			#if self.log.idx_exist(prevLogIndex+1):
+				#self.log.rollback(prevLogIndex+1)
 			# Append the new entries to the log
 			for entry in entries:
 				self.log.append_to_end(entry)
@@ -355,7 +358,7 @@ class ConsensusModule:
 		incoming_term = int(message['term'])
 		if incoming_term > self.term:
 			self.set_follower(incoming_term)  # set state to follower
-			print(self.id, ' greater term/leader detected, setting state to follower.')
+			#print(self.id, ' greater term/leader detected, setting state to follower.')
 
 		follower = message['senderID']
 		success = bool(message['success'])
@@ -387,7 +390,7 @@ class ConsensusModule:
 					# servers have replicated that entry, commit that entry. 
 					self.commitIndex = N
 
-		print('\n', self.id, ' received append entries reply :', message)
+		#print('\n', self.id, ' received append entries reply :', message)
 
 	def receive_vote_request(self, message: dict):
 		'''
@@ -397,11 +400,11 @@ class ConsensusModule:
 		'''
 		candidate = message['candidateID']
 		incoming_term = int(message['term'])
-		print('\n', self.id, ' received vote request from ', candidate, ': \n')
+		#print('\n', self.id, ' received vote request from ', candidate, ': \n')
 
 		if incoming_term > self.term:  # as always, check for greater term, set to follower if true
 			self.set_follower(incoming_term)  # set state to follower
-			print(self.id, ' greater term detected, setting state to follower.')
+			#print(self.id, ' greater term detected, setting state to follower.')
 
 		# TODO: if candidate log shorter than self, reply false
 
@@ -410,7 +413,7 @@ class ConsensusModule:
 			# term of incoming last log entry is equal or greater than self. 
 			# if equal term, index of incoming last log entry is equal or greater than self. 
 			self.voted_for = candidate
-			print('\n', self.id, ' voted for ', self.voted_for)
+			#print('\n', self.id, ' voted for ', self.voted_for)
 
 		voteGranted = False
 		if self.voted_for == candidate:
@@ -419,23 +422,23 @@ class ConsensusModule:
 		reply = self.make_message('reply to vote request', voteGranted= voteGranted)
 		self.messenger.send(reply, candidate)
 		
-		print('\n', self.id, ' replied ', reply['voteGranted'], ' to ', candidate, ' request for votes')
+		#print('\n', self.id, ' replied ', reply['voteGranted'], ' to ', candidate, ' request for votes')
 
 	def receive_vote_reply(self, message: dict):
 
 		vote_granted = message['voteGranted']  # store value of vote received
 		sender = message['senderID']
-		print(self.id, ' received vote reply: ', vote_granted, ' from ', sender)
+		#print(self.id, ' received vote reply: ', vote_granted, ' from ', sender)
 
 		if self.election_state == 'candidate':
 			self.reply_status[sender] = True  # mark sender as having replied
 			if vote_granted == 'True':
 				self.vote_count += 1
-				print('\n', self.id, ' vote count = ', self.vote_count)
-			print('votes needed: ', math.floor(len(self.peers) / 2) + 1)
+				#print('\n', self.id, ' vote count = ', self.vote_count)
+			#print('votes needed: ', math.floor(len(self.peers) / 2) + 1)
 			if self.vote_count > math.floor(len(self.peers) / 2):
 				self.set_leader()
-				print('\n', self.id, ' majority votes acquired')
+				#print('\n', self.id, ' majority votes acquired')
 
 	def make_message(self, message_type: str, voteGranted:bool = False, success: bool = False, entries: str = '[]') -> dict:
 		'''
