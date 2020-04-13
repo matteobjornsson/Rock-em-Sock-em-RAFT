@@ -1,6 +1,7 @@
 from ElectionTimer import Election_Timer
 from Heartbeat import Heartbeat
 from Messenger import Messenger
+from server_logic import *
 
 from time import sleep, clock
 from threading import Thread
@@ -232,7 +233,6 @@ class ConsensusModule:
 			# print('\n', self.id, ' set state to candidate')
 		self.heartbeat.stop_timer()
 		self.election_state = 'candidate'
-		self.server.turn_off_leader_queue()
 		self.term+= 1 # starting an election increments the term
 		self.voted_for = self.id # vote for self
 		self.vote_count = 1 # count of self vote
@@ -256,7 +256,7 @@ class ConsensusModule:
 			entries_string = self.log.get_entries_string(self.nextIndex[peer])
 			if not entries_string:
 				entries_string = 'heartbeat'
-			heartbeat = self.make_message('heartbeat', entries=entries_string)
+			heartbeat = self.make_message('heartbeat', entries=entries_string, destination=peer)
 			#print('Append entries: ', heartbeat)
 			self.messenger.send(heartbeat, peer)
 
@@ -440,21 +440,24 @@ class ConsensusModule:
 				self.set_leader()
 				#print('\n', self.id, ' majority votes acquired')
 
-	def make_message(self, message_type: str, voteGranted:bool = False, success: bool = False, entries: str = '[]') -> dict:
+	def make_message(self, message_type: str, voteGranted:bool = False, 
+	success: bool = False, entries: str = '[]', destination = '') -> dict:
 		'''
 		options: 'heartbeat', 'reply to append request', 'request votes', 
 		'reply to vote request'. returns a dictionary
 		Include destination with reply to vote request. 
 		'''
 		if message_type == 'heartbeat':
+			prevLogIndex = self.nextIndex[destination]-1
+			prevLog = self.log.get_entry(prevLogIndex)
 			message = {
 				'messageType': 	'AppendEntriesRPC',
 				'leaderID': 	self.id,
 				'term': 		str(self.term),
 				'entries'		:	entries,
-				'prevLogIndex' : str(len(self.log)-1),
-				'prevLogTerm' : str(self.log.get_entry(-1).term),
-				'prevLogCommand': str(self.log.get_entry(-1).command),
+				'prevLogIndex' : str(prevLogIndex),
+				'prevLogTerm' : str(prevLog.term),
+				'prevLogCommand': str(prevLog.command),
 				'leaderCommit' : str(self.commitIndex)
 			}
 		elif message_type == 'reply to append request':
