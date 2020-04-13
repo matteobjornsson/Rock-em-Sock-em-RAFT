@@ -33,6 +33,8 @@ class Server:
                 command = self.cm.get_command(self.lastApplied)
                 self.update_status(command)
                 self.check_game_status()
+                self.cm.simulation_print()
+                sleep(0.1)
 
 
     def handle_incoming_message(self, msg):
@@ -148,3 +150,7 @@ class ServerLogic:
 
         return_msg_dict = {'msg': return_message}
         return game_state, return_msg_dict
+
+if __name__ == '__main__':
+    arg = sys.argv[1]
+    s = Server(arg)

@@ -96,7 +96,7 @@ class Messenger:
 			msg = self.reduce_message(message)
 
 			self.target.handle_incoming_message(msg)
-			self.target.simulation_print()
+
 
 	def reduce_message(self, SQSmessage:dict) -> dict:
 		msg = {}
@@ -134,8 +134,7 @@ class Messenger:
 			MessageGroupId='queue',
 			MessageBody=message_body
 		)
-		#print('Message sent from ', self.id, ' to ', destination, ': ', message)
-		self.target.simulation_print()
+
 
 if __name__ == '__main__':
 
