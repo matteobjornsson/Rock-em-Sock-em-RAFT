@@ -33,8 +33,8 @@ class Server:
                 command = self.cm.get_command(self.lastApplied)
                 self.update_status(command)
                 self.check_game_status()
-                self.cm.simulation_print()
-                sleep(0.1)
+            self.cm.simulation_print()
+            sleep(0.1)
 
 
     def handle_incoming_message(self, msg):

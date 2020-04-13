@@ -54,5 +54,5 @@ class Heartbeat:
                 else:
                     #if count > 100000:  
                     sleep(.2)
-                    print('Heartbeat Timer: ', self.duration-elapsed_time)  
+                    #print('Heartbeat Timer: ', self.duration-elapsed_time)  
                     #    count = 0

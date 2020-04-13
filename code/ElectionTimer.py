@@ -53,5 +53,5 @@ class Election_Timer:
                 else:
                     #if count > 100000: 
                     sleep(.2)
-                    print('Election Timer: ', timeout-elapsed_time)  
+                    #print('Election Timer: ', timeout-elapsed_time)  
                         #count =0

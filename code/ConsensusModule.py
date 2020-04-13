@@ -115,15 +115,15 @@ class Log:
 	def get_entries_string(self, idx: int) -> str:
 		entries = ''
 		for i in range(idx, len(self.log)):
-			entries += str(self.get_entry(i)) + ','
-		entries = entries.strip(',')
+			entries += str(self.get_entry(i)) + ';'
+		entries = entries.strip(';')
 		return entries
 
 	def parse_entries_to_list(self, entries: str) -> list:
 		if entries == 'heartbeat':
 			return []
 		else:
-			split_strings = entries.split(',')
+			split_strings = entries.split(';')
 			entry_list= []
 			for entry in split_strings:
 				entry_list.append(LogEntry.from_string(LogEntry, entry))
@@ -226,7 +226,7 @@ class ConsensusModule:
 			if not entries_string:
 				entries_string = 'heartbeat'
 			heartbeat = self.make_message('heartbeat', entries=entries_string)
-			print('Append entries: ', heartbeat)
+			#print('Append entries: ', heartbeat)
 			self.messenger.send(heartbeat, peer)
 
 	def start_election(self):  # this is equivalent to "set_candidate()"
@@ -301,14 +301,10 @@ class ConsensusModule:
 		if (incoming_term == self.term and self.election_state == 'follower'):
 			self.election_timer.restart_timer()
 
-
-		
-
-
 		success, match = self.process_AppendRPC(entries, leaderCommit, 
 									prevLogIndex, prevLogTerm, prevLogCommand)
-
-		reply = self.make_message('reply to append request', 'leader', success)
+		print(success, match, '=================================')
+		reply = self.make_message('reply to append request', success=success)
 		self.messenger.send(reply, leader)
 			
 		print('\n', self.id, ' replied to append request')
@@ -408,8 +404,9 @@ class ConsensusModule:
 		if self.voted_for == candidate:
 			voteGranted = True
 
-		reply = self.make_message('reply to vote request', voteGranted)
+		reply = self.make_message('reply to vote request', voteGranted= voteGranted)
 		self.messenger.send(reply, candidate)
+		
 		print('\n', self.id, ' replied ', reply['voteGranted'], ' to ', candidate, ' request for votes')
 
 	def receive_vote_reply(self, message: dict):
@@ -428,7 +425,7 @@ class ConsensusModule:
 				self.set_leader()
 				print('\n', self.id, ' majority votes acquired')
 
-	def make_message(self, message_type: str, success: bool = False, entries: str = '[]') -> dict:
+	def make_message(self, message_type: str, voteGranted:bool = False, success: bool = False, entries: str = '[]') -> dict:
 		'''
 		options: 'heartbeat', 'reply to append request', 'request votes', 
 		'reply to vote request'. returns a dictionary
@@ -466,7 +463,7 @@ class ConsensusModule:
 				'messageType': 	'VoteReply',
 				'senderID':		self.id,
 				'term':			str(self.term),
-				'voteGranted':	str(success)
+				'voteGranted':	str(voteGranted)
 			}
 		else:
 			print('you fucked up')
