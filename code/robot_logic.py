@@ -63,6 +63,12 @@ class Robot:
         elif self.game_state == 'exit':
             print("Your opponent forfeited, you win!")
             self.ui.running_game = False
+        elif self.game_state == 'blocked':
+            print("Your opponent blocked your punch. ")
+            self.ui.running_game = True
+        elif self.game_state == 'failed':
+            print("You missed...")
+            self.ui.running_game = True
         else:
             self.ui.running_game = True
 
@@ -166,5 +172,4 @@ class Robot:
 if __name__ == '__main__':
     robot_blue = Robot('blue')
     robot_red = Robot('red')
-    server = Server('leader')
     robot_blue.punch_with_right()
