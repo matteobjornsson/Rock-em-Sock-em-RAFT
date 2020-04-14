@@ -29,7 +29,7 @@ class Messenger:
 		send(message: dict, destination: str) : <-must be formatted correctly for SQS
 	"""
 
-	def __init__(self, id: str, target):
+	def __init__(self, id: str, target, run: bool=True):
 		'''
 		Messenger constructor. Takes id from list
 		'0', '1', '2', '3', '4', 'leader', 'client-blue', 'client-red'.
@@ -37,6 +37,7 @@ class Messenger:
 		That class must implement handle_incoming_message(message: dict)
 		'''
 		self.id = id #id of self in system
+		self.run = run
 		self.sqs = boto3.client('sqs') # make a new SQS object
 		self.incoming_queue_URL = message_queue_URLs[self.id] # store URL of queue for self
 		self.target = target    # store class that is using this messenger
@@ -56,6 +57,12 @@ class Messenger:
 		t.start()
 		return t
 
+	def off(self):
+		self.run = False
+
+	def on(self):
+		self.run = True
+
 	def listen_for_messages(self):
 		''' loop that pulls messages from given SQS queue
 
@@ -64,39 +71,39 @@ class Messenger:
 		target class via the target.handle_incoming_message(message) interface
 		'''
 		while True:
-			sleep(.1)
-			# response stores results of receive call from SQS
-			response = self.sqs.receive_message(
-				QueueUrl=self.incoming_queue_URL,
-				MaxNumberOfMessages=1,
-				MessageAttributeNames=['All'],
-				WaitTimeSeconds=0
-			)
-
-			# check if a message was received. if no message, try again
-			if 'Messages' not in response:
-				continue
-			else:
-				message = response['Messages'][0]['MessageAttributes']
-
-			# this receipt handle is required to delete the  message from queue
-			receipt_handle = response['Messages'][0]['ReceiptHandle']
-			# delete the message after receiving
-			try:
-				self.sqs.delete_message(
+			while self.run:
+				# response stores results of receive call from SQS
+				response = self.sqs.receive_message(
 					QueueUrl=self.incoming_queue_URL,
-					ReceiptHandle=receipt_handle
+					MaxNumberOfMessages=1,
+					MessageAttributeNames=['All'],
+					WaitTimeSeconds=0
 				)
-			except botocore.exceptions.ClientError:
-				print("Receipt Handle Expired")
-			# print('\n',self.id,' Received and deleted message : \n\"{}\"'.format(message))
 
-			# this calls on the holding class to handle the messages,
+				# check if a message was received. if no message, try again
+				if 'Messages' not in response:
+					continue
+				else:
+					message = response['Messages'][0]['MessageAttributes']
 
-			msg = self.reduce_message(message)
+				# this receipt handle is required to delete the  message from queue
+				receipt_handle = response['Messages'][0]['ReceiptHandle']
+				# delete the message after receiving
+				try:
+					self.sqs.delete_message(
+						QueueUrl=self.incoming_queue_URL,
+						ReceiptHandle=receipt_handle
+					)
+				except botocore.exceptions.ClientError:
+					print("Receipt Handle Expired")
+				# print('\n',self.id,' Received and deleted message : \n\"{}\"'.format(message))
 
-			self.target.handle_incoming_message(msg)
-			self.target.simulation_print()
+				# this calls on the holding class to handle the messages,
+
+				msg = self.reduce_message(message)
+
+				self.target.handle_incoming_message(msg)
+
 
 	def reduce_message(self, SQSmessage:dict) -> dict:
 		msg = {}
@@ -134,8 +141,7 @@ class Messenger:
 			MessageGroupId='queue',
 			MessageBody=message_body
 		)
-		#print('Message sent from ', self.id, ' to ', destination, ': ', message)
-		self.target.simulation_print()
+
 
 if __name__ == '__main__':
 

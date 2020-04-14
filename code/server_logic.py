@@ -1,6 +1,9 @@
 import sys
 sys.path.append('..')
 from Messenger import Messenger
+from ConsensusModule import *
+from threading import Thread
+from time import sleep
 import random
 
 
@@ -13,17 +16,42 @@ class Server:
 
     def __init__(self, nodeID):
         self.id = nodeID
-        self.messenger = Messenger(self.id, self)
+        self.messenger = Messenger(id='leader', target=self, run=False)
         self.game_state = ''
         self.log = ''
-        self.consensus_module = 'leader'  # ConsensusModule() set to "leader" for testing purposes
-        self.server_logic = ServerLogic()
+        self.cm = ConsensusModule(id=self.id, peer_count=5, server=self)  # ConsensusModule() set to "leader" for testing purposes
+        self.server_logic = ServerLogic(self.cm)
+        self.lastApplied = 0
+
+        self.log_checker = Thread(
+            target=self.check_for_committed_commands,
+            name='Server: Check for new log entries to apply',
+            daemon=True
+        ).start()
+
+    def turn_on_leader_queue(self):
+        self.messenger.on()
+
+    def turn_off_leader_queue(self):
+        self.messenger.off()
+
+    def check_for_committed_commands(self):
+        while True:
+            if self.lastApplied < self.cm.commitIndex:
+                self.lastApplied += 1
+                command = self.cm.get_command(self.lastApplied)
+                self.update_status(command)
+                self.check_game_status()
+            self.cm.simulation_print()
+            sleep(0.05)
+
 
     def handle_incoming_message(self, msg):
-        received_msg = msg
-        print(received_msg)
-        self.update_status(received_msg)
-        self.check_game_status()
+        received_msg = str(msg)
+        self.cm.add_client_command_to_log(received_msg)
+        #print(received_msg)
+        #self.update_status(received_msg)
+        #self.check_game_status()
 
     def update_status(self, received_msg):
         """
@@ -37,27 +65,30 @@ class Server:
             self.server_logic.set_red_status(received_msg['state'])
             if not received_msg['state'] == 'exit':
                 self.game_state, msg_to_send = self.server_logic.logic_after_commit(received_msg['_id'])
-                if self.consensus_module == 'leader':
+                if self.cm.election_state == 'leader':
                     self.messenger.send(msg_to_send, 'client-red')
             else:
-                msg_to_send = {'msg': 'exit'}
-                self.messenger.send(msg_to_send, 'client-blue')
+                if self.cm.election_state == 'leader':
+                    msg_to_send = {'msg': 'exit'}
+                    self.messenger.send(msg_to_send, 'client-blue')
         elif received_msg['_id'] == 'client-blue':
             self.server_logic.set_blue_status(received_msg['state'])
             if not received_msg['state'] == 'exit':
                 self.game_state, msg_to_send = self.server_logic.logic_after_commit(received_msg['_id'])
-                if self.consensus_module == 'leader':
+                if self.cm.election_state == 'leader':
                     self.messenger.send(msg_to_send, 'client-blue')
             else:
-                msg_to_send = {'msg': 'exit'}
-                self.messenger.send(msg_to_send, 'client-red')
+                if self.cm.election_state == 'leader':
+                    msg_to_send = {'msg': 'exit'}
+                    self.messenger.send(msg_to_send, 'client-red')
 
     def check_game_status(self):
-        msg_to_send = {'msg': 'lost'}
-        if self.game_state == 'blue_won':
-            self.messenger.send(msg_to_send, 'client-red')
-        elif self.game_state == 'red_won':
-            self.messenger.send(msg_to_send, 'client-blue')
+        if self.cm.election_state == 'leader':
+            msg_to_send = {'msg': 'lost'}
+            if self.game_state == 'blue_won':
+                self.messenger.send(msg_to_send, 'client-red')
+            elif self.game_state == 'red_won':
+                self.messenger.send(msg_to_send, 'client-blue')
 
 
 class ServerLogic:
@@ -67,11 +98,12 @@ class ServerLogic:
     Keeps track of blue and red's respective status.
     """
 
-    def __init__(self):
+    def __init__(self, consensus_module):
         """
         ServerLogic constructor.
         Keeps track of blue and red states.
         """
+        self.cm = consensus_module
         self.blue_status = ''
         self.red_status = ''
 
@@ -89,12 +121,12 @@ class ServerLogic:
         """
         return_message = ''
         game_state = ''
-        print('blue is ', self.blue_status)
-        print('red is ', self.red_status)
+        #print('blue is ', self.blue_status)
+        #print('red is ', self.red_status)
         if msg_id == 'client-red':
             if (self.red_status == 'punch_right' and not self.blue_status == 'block_left') or (
                     self.red_status == 'punch_left' and not self.blue_status == 'block_right'):
-                if random.random() <= 0.1:
+                if self.cm.election_state == 'leader' and random.random() <= 0.1:
                     return_message = 'won'
                     game_state = 'red_won'
                 else:
@@ -111,7 +143,7 @@ class ServerLogic:
         elif msg_id == 'client-blue':
             if (self.blue_status == 'punch_right' and not self.red_status == 'block_left') or (
                     self.blue_status == 'punch_left' and not self.red_status == 'block_right'):
-                if random.random() <= 0.1:
+                if self.cm.election_state == 'leader' and  random.random() <= 0.1:
                     return_message = 'won'
                     game_state = 'blue_won'
                 else:
@@ -127,3 +159,7 @@ class ServerLogic:
 
         return_msg_dict = {'msg': return_message}
         return game_state, return_msg_dict
+
+if __name__ == '__main__':
+    arg = sys.argv[1]
+    s = Server(arg)
