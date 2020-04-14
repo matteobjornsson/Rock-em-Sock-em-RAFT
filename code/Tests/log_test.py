@@ -10,7 +10,6 @@ class TestLog(unittest.TestCase):
             print('file not found')
 
         self.log = Log()
-
         self.log.append_to_end(LogEntry(1, 'blue_block_left'))
         self.log.append_to_end(LogEntry(1, 'red_punch_right'))
         self.log.append_to_end(LogEntry(1, 'red_block_left'))
@@ -24,7 +23,6 @@ class TestLog(unittest.TestCase):
     def test_rollback_log(self):
         self.log.rollback(3)
         self.assertEqual(self.log.get_entry(-1).command, 'red_block_left')
-
 
 
 def suite():

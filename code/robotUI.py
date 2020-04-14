@@ -1,6 +1,6 @@
 from robot_logic import *
 import sys, threading
-
+from server_logic import Server
 
 class UI:
     """
@@ -9,6 +9,7 @@ class UI:
     def __init__(self, color):
         self.robot = Robot(color, self)
         self.running_game = True
+        #self.server = Server('leader')
 
     def start(self):
         t = threading.Thread(target=self.run_game)
@@ -44,7 +45,5 @@ class UI:
 
 if __name__ == '__main__':
     color = sys.argv[1]
-    print(color)
     ui = UI(color)
-    server = Server('leader')
     ui.start()
