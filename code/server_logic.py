@@ -43,7 +43,7 @@ class Server:
                 self.update_status(command)
                 self.check_game_status()
             self.cm.simulation_print()
-            sleep(0.1)
+            sleep(0.05)
 
 
     def handle_incoming_message(self, msg):

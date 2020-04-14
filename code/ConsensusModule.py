@@ -174,14 +174,14 @@ class ConsensusModule:
 		# The following three variables need to survive on persistent storage.
 		self.voted_for = 'null'
 		self.log = Log(id)
-		self.term = 0
+		self.term = self.log.get_entry(len(self.log)-1).term
 
 		# volitile variables:
 		self.id = id
 		self.server = server
 		self.peers = [str(x) for x in range(0, peer_count) if x != int(self.id)]
 		self.election_state = 'follower'
-		self.timer_length = 4
+		self.timer_length = 1
 		self.vote_count = 0
 		self.reply_status = {}
 
@@ -215,9 +215,9 @@ class ConsensusModule:
 		#print('\n', self.id, ' Set state to leader')
 		self.election_state = 'leader'
 		self.election_timer.stop_timer()  # pause the election timer, leader will remain leader
+		self.reset_next_and_match()
 		self.send_heartbeat()  # immediately send heartbeat to peers
 		self.heartbeat.restart_timer()  # continue sending heartbeat on interval
-		self.reset_next_and_match()
 		self.server.turn_on_leader_queue()
 
 	def reset_next_and_match(self):
@@ -253,13 +253,14 @@ class ConsensusModule:
 		
 	def send_heartbeat(self):
 		'''Make a heartbeat message and send it to all peers. Used by leader'''	
-		for peer in self.peers:  # send to peers
-			entries_string = self.log.get_entries_string(self.nextIndex[peer])
-			if not entries_string:
-				entries_string = 'heartbeat'
-			heartbeat = self.make_message('heartbeat', entries=entries_string, destination=peer)
-			#print('Append entries: ', heartbeat)
-			self.messenger.send(heartbeat, peer)
+		if self.election_state == 'leader':
+			for peer in self.peers:  # send to peers
+				entries_string = self.log.get_entries_string(self.nextIndex[peer])
+				if not entries_string:
+					entries_string = 'heartbeat'
+				heartbeat = self.make_message('heartbeat', entries=entries_string, destination=peer)
+				#print('Append entries: ', heartbeat)
+				self.messenger.send(heartbeat, peer)
 
 	def handle_incoming_message(self, message: dict):
 		message_type = message['messageType']
@@ -307,11 +308,16 @@ class ConsensusModule:
 		
 		# reset election timer
 		#print('\n', self.id, ' received append entry request from ', leader, ': \n',  message)
-		if (incoming_term == self.term and self.election_state == 'follower'):
+		if (self.election_state == 'follower'):
 			self.election_timer.restart_timer()
 
-		success, match = self.process_AppendRPC(entries, leaderCommit, 
-									prevLogIndex, prevLogTerm, prevLogCommand)
+		success, match = self.process_AppendRPC(
+			entries=entries, 
+			leaderCommit=leaderCommit, 
+			prevLogIndex=prevLogIndex, 
+			prevLogTerm=prevLogTerm,
+			prevLogCommand=prevLogCommand
+			)
 		#print(success, match, '=================================')
 		reply = self.make_message('reply to append request', success=success)
 		self.messenger.send(reply, leader)
@@ -331,8 +337,8 @@ class ConsensusModule:
 		#reply false if log doesn’t contain an entry at prevLogIndex whose 
 		# term matches prevLogTerm (§5.3)
 		if ((not self.log.idx_exist(prevLogIndex))
-			or (self.log.get_entry(prevLogIndex).term != prevLogTerm)
-			or (self.log.get_entry(prevLogIndex).command != prevLogCommand)):
+			or (self.log.get_entry(prevLogIndex).term != prevLogTerm)):
+			#or (self.log.get_entry(prevLogIndex).command != prevLogCommand)): 
 			return False, 0
 		# otherwise, check if outdated entry exists in initial append spot. 
 		# if so, delete that entry and all following
@@ -435,17 +441,19 @@ class ConsensusModule:
 
 		vote_granted = message['voteGranted']  # store value of vote received
 		sender = message['senderID']
+		incoming_term = int(message['term'])
 		#print(self.id, ' received vote reply: ', vote_granted, ' from ', sender)
 
-		if self.election_state == 'candidate':
-			self.reply_status[sender] = True  # mark sender as having replied
-			if vote_granted == 'True':
-				self.vote_count += 1
-				#print('\n', self.id, ' vote count = ', self.vote_count)
-			#print('votes needed: ', math.floor(len(self.peers) / 2) + 1)
-			if self.vote_count > math.floor(len(self.peers) / 2):
-				self.set_leader()
-				#print('\n', self.id, ' majority votes acquired')
+		if self.election_state == 'candidate' and incoming_term == self.term:
+			if not self.reply_status[sender]:
+				self.reply_status[sender] = True  # mark sender as having replied
+				if vote_granted == 'True':
+					self.vote_count += 1
+					#print('\n', self.id, ' vote count = ', self.vote_count)
+				#print('votes needed: ', math.floor(len(self.peers) / 2) + 1)
+				if self.vote_count > math.floor(len(self.peers) / 2):
+					self.set_leader()
+					#print('\n', self.id, ' majority votes acquired')
 
 	def make_message(self, message_type: str, voteGranted:bool = False, 
 	success: bool = False, entries: str = '[]', destination = '') -> dict:
@@ -508,32 +516,33 @@ class ConsensusModule:
 		node = f"Node:\t\t{self.id}\n"
 		term = f"Term:\t\t{str(self.term)}\n"
 		commitIndex = f"Commit Index:\t{str(self.commitIndex)}\n"
-		electionState = f"Election State:\t{self.election_state}\n"
+		electionState = f"Election State:\t{self.election_state}\n\n"
 		votedFor = f"Voted For:\t{self.voted_for}\n"
 		voteCount = f"Vote Count:\t{str(self.vote_count)}\n\n"
 
-		header1 = "log:"
+		header1 = ""
 		for x in range(0, 10): #len(self.log.log)
 			header1 += '\t ' + str(x)
 		header1 += '\n'
 
-		log = ''
+		log = 'log:'
 		for logEntry in self.log.log:
 			log += '\t' + '.' + str(logEntry.term)  + '.'
 		log += '\n'
-
+		peerStatusHeader = ''
 		peerStatus = ''
 		if self.election_state == 'leader':
+			peerStatusHeader = '\nFollower Status:\n'
 			for peer in self.peers:
-				peerStatus += peer
+				peerStatus += 'Node ' + peer + ':'
 				match = self.matchIndex[peer]
 				next = self.nextIndex[peer]
 				mtab = '\t'*(match+1)
 				ntab = '\t'*(next - match)
-				peerStatus += mtab + ' *' + ntab + ' ^\n'+ 'Match: ' + str(match) + ' Next: '+ str(next) +'\n'
+				peerStatus += mtab + ' *' + ntab + ' ^\n'
 
-		status = (node + term + commitIndex + electionState+ votedFor + 
-				voteCount+ header1 + log + peerStatus)
+		status = (node + term + commitIndex + electionState+  
+				 header1 + log +peerStatusHeader + peerStatus)
 		
 		file = open(f"../files/status{self.id}.txt", 'w')
 		file.write(status)

@@ -29,7 +29,7 @@ class Messenger:
 		send(message: dict, destination: str) : <-must be formatted correctly for SQS
 	"""
 
-	def __init__(self, id: str, target, run: bool):
+	def __init__(self, id: str, target, run: bool=True):
 		'''
 		Messenger constructor. Takes id from list
 		'0', '1', '2', '3', '4', 'leader', 'client-blue', 'client-red'.
@@ -71,7 +71,6 @@ class Messenger:
 		target class via the target.handle_incoming_message(message) interface
 		'''
 		while True:
-			sleep(.15)
 			while self.run:
 				# response stores results of receive call from SQS
 				response = self.sqs.receive_message(
