@@ -36,13 +36,17 @@ class Server:
         self.messenger.off()
 
     def check_for_committed_commands(self):
+        print_count = 0
         while True:
+            print_count += 1
             if self.lastApplied < self.cm.commitIndex:
                 self.lastApplied += 1
                 command = self.cm.get_command(self.lastApplied)
                 self.update_status(command)
                 self.check_game_status()
-            self.cm.simulation_print()
+            if print_count > 25:
+                self.cm.simulation_print()
+                print_count = 0
             sleep(0.05)
 
 

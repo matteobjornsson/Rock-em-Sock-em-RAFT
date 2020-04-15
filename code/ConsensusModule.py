@@ -181,7 +181,7 @@ class ConsensusModule:
 		self.server = server
 		self.peers = [str(x) for x in range(0, peer_count) if x != int(self.id)]
 		self.election_state = 'follower'
-		self.timer_length = 1
+		self.timer_length = 2
 		self.vote_count = 0
 		self.reply_status = {}
 
@@ -516,23 +516,35 @@ class ConsensusModule:
 		node = f"Node:\t\t{self.id}\n"
 		term = f"Term:\t\t{str(self.term)}\n"
 		commitIndex = f"Commit Index:\t{str(self.commitIndex)}\n"
-		electionState = f"Election State:\t{self.election_state}\n\n"
+		electionState = f"Election State:\t{self.election_state}\n"
 		votedFor = f"Voted For:\t{self.voted_for}\n"
-		voteCount = f"Vote Count:\t{str(self.vote_count)}\n\n"
+		voteCount = f"Vote Count:\t{str(self.vote_count)}\n"
 
-		header1 = ""
-		for x in range(0, 10): #len(self.log.log)
-			header1 += '\t ' + str(x)
-		header1 += '\n'
+		
+		loglen = len(self.log)
+		
 
-		log = 'log:'
-		for logEntry in self.log.log:
-			log += '\t' + '.' + str(logEntry.term)  + '.'
-		log += '\n'
+		# log = 'log:'
+		# for logEntry in self.log.log:
+		# 	log += '\t' + '.' + str(logEntry.term)  + '.'
+		# log += '\n'
+
+		log_contents = ''
+		if self.election_state != 'leader':
+			log_contents += '\nLog Contents:\nIndex\tTerm\tCommand\n'
+			for x in range(0, loglen):
+				log_contents += str(x) +'\t' + str(self.log.get_entry(x)) + '\n'
+
+		header1 = ''
 		peerStatusHeader = ''
 		peerStatus = ''
 		if self.election_state == 'leader':
-			peerStatusHeader = '\nFollower Status:\n'
+			header1 = '----------' + '--------'*loglen+'\n'+"Index: "
+			for x in range(0, loglen + 1): #len(self.log.log)
+				header1 += '\t ' + str(x)
+			header1 += '\n' + '----------' + '--------'*loglen+'\n'
+
+			peerStatusHeader = '\nFollower Match * and Next ^ Indices:\n'
 			for peer in self.peers:
 				peerStatus += 'Node ' + peer + ':'
 				match = self.matchIndex[peer]
@@ -542,7 +554,7 @@ class ConsensusModule:
 				peerStatus += mtab + ' *' + ntab + ' ^\n'
 
 		status = (node + term + commitIndex + electionState+  
-				 header1 + log +peerStatusHeader + peerStatus)
+				 log_contents + peerStatusHeader + header1 + peerStatus)
 		
 		file = open(f"../files/status{self.id}.txt", 'w')
 		file.write(status)
