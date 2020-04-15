@@ -88,11 +88,20 @@ class Server:
 
     def check_game_status(self):
         if self.cm.election_state == 'leader':
-            msg_to_send = {'msg': 'lost'}
+
             if self.game_state == 'blue_won':
+                msg_to_send = {'msg': 'lost'}
                 self.messenger.send(msg_to_send, 'client-red')
             elif self.game_state == 'red_won':
+                msg_to_send = {'msg': 'lost'}
                 self.messenger.send(msg_to_send, 'client-blue')
+            elif self.game_state == 'blue_blocked':
+                msg_to_send = {'msg': 'blocked_punch'}
+                self.messenger.send(msg_to_send, 'client-red')
+            elif self.game_state == 'red_blocked':
+                msg_to_send = {'msg': 'blocked_punch'}
+                self.messenger.send(msg_to_send, 'client-blue')
+
 
 
 class ServerLogic:
@@ -139,7 +148,7 @@ class ServerLogic:
             elif (self.red_status == 'punch_right' and self.blue_status == 'block_left') or (
                     self.red_status == 'punch_left' and self.blue_status == 'block_right'):
                 return_message = 'blocked'
-                game_state = 'ongoing'
+                game_state = 'red_blocked'
             else:
                 game_state = 'ongoing'
                 return_message = 'Nothing happened.'
@@ -156,7 +165,7 @@ class ServerLogic:
             elif (self.blue_status == 'punch_right' and self.red_status == 'block_left') or (
                     self.blue_status == 'punch_left' and self.red_status == 'block_right'):
                 return_message = 'blocked'
-                game_state = 'ongoing'
+                game_state = 'blue_blocked'
             else:
                 game_state = 'ongoing'
                 return_message = 'Nothing happened.'

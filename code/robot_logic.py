@@ -69,6 +69,9 @@ class Robot:
         elif self.game_state == 'failed':
             print("You missed...")
             self.ui.running_game = True
+        elif self.game_state == 'blocked_punch':
+            print("You blocked a punch!")
+            self.ui.running_game = True
         else:
             self.ui.running_game = True
 
