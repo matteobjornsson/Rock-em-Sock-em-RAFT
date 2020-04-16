@@ -55,10 +55,10 @@ class Robot:
 
     def set_running_game(self):
         if self.game_state == 'won':
-            print("Congratulations! You knocked your opponents' head off!\n" + winMessage)
+            print(winMessage, "\nCongratulations! You knocked your opponents' head off!")
             self.ui.running_game = False
         elif self.game_state == 'lost':
-            print('Oops, looks like your head got knocked off. \n'+ loseMessage)
+            print(loseMessage,'\nOops, looks like your head got knocked off.' )
             self.ui.running_game = False
         elif self.game_state == 'exit':
             print("Your opponent forfeited, you win!")
@@ -172,8 +172,6 @@ class Robot:
         self.messenger.send(msg_dictionary, "leader")
 
 winMessage = ''' 
-
-
  /$$     /$$ /$$$$$$  /$$   /$$
 |  $$   /$$//$$__  $$| $$  | $$
  \  $$ /$$/| $$  \ $$| $$  | $$
@@ -191,12 +189,8 @@ winMessage = '''
 | $$$/ \  $$$  | $$  | $$\  $$$
 | $$/   \  $$ /$$$$$$| $$ \  $$
 |__/     \__/|______/|__/  \__/
-                               
-
 '''
 loseMessage = '''
-
-
  __      __   ______   __    __        
 |  \    /  \ /      \ |  \  |  \       
  \$$\  /  $$|  $$$$$$\| $$  | $$       
@@ -214,9 +208,7 @@ loseMessage = '''
 | $$     | $$  | $$ _\$$$$$$\| $$$$$   
 | $$_____| $$__/ $$|  \__| $$| $$_____ 
 | $$     \\$$    $$ \$$    $$| $$     \\
- \$$$$$$$$ \$$$$$$   \$$$$$$  \$$$$$$$$                               
-
-
+ \$$$$$$$$ \$$$$$$   \$$$$$$  \$$$$$$$$
 '''
 
 if __name__ == '__main__':

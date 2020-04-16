@@ -139,7 +139,7 @@ class ServerLogic:
         if msg_id == 'client-red':
             if (self.red_status == 'punch_right' and not self.blue_status == 'block_left') or (
                     self.red_status == 'punch_left' and not self.blue_status == 'block_right'):
-                if self.cm.election_state == 'leader' and random.random() <= 0.5:
+                if self.cm.election_state == 'leader' and random.random() <= 0.1:
                     return_message = 'won'
                     game_state = 'red_won'
                 else:
@@ -156,7 +156,7 @@ class ServerLogic:
         elif msg_id == 'client-blue':
             if (self.blue_status == 'punch_right' and not self.red_status == 'block_left') or (
                     self.blue_status == 'punch_left' and not self.red_status == 'block_right'):
-                if self.cm.election_state == 'leader' and  random.random() <= 0.5:
+                if self.cm.election_state == 'leader' and  random.random() <= 0.1:
                     return_message = 'won'
                     game_state = 'blue_won'
                 else:
