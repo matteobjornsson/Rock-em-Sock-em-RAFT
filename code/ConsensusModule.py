@@ -259,7 +259,7 @@ class ConsensusModule:
 				if not entries_string:
 					entries_string = 'heartbeat'
 				heartbeat = self.make_message('heartbeat', entries=entries_string, destination=peer)
-				#print('Append entries: ', heartbeat)
+				print('Append entries: ', heartbeat)
 				self.messenger.send(heartbeat, peer)
 
 	def handle_incoming_message(self, message: dict):
@@ -343,8 +343,8 @@ class ConsensusModule:
 		# otherwise, check if outdated entry exists in initial append spot. 
 		# if so, delete that entry and all following
 		else:
-			#if self.log.idx_exist(prevLogIndex+1):
-				#self.log.rollback(prevLogIndex+1)
+			if self.log.idx_exist(prevLogIndex+1):
+				self.log.rollback(prevLogIndex+1)
 			# Append the new entries to the log
 			for entry in entries:
 				self.log.append_to_end(entry)
@@ -522,8 +522,6 @@ class ConsensusModule:
 
 		
 		loglen = len(self.log)
-		
-
 		# log = 'log:'
 		# for logEntry in self.log.log:
 		# 	log += '\t' + '.' + str(logEntry.term)  + '.'
@@ -543,15 +541,24 @@ class ConsensusModule:
 			for x in range(0, loglen + 1): #len(self.log.log)
 				header1 += '\t ' + str(x)
 			header1 += '\n' + '----------' + '--------'*loglen+'\n'
-
+			
 			peerStatusHeader = '\nFollower Match * and Next ^ Indices:\n'
-			for peer in self.peers:
-				peerStatus += 'Node ' + peer + ':'
-				match = self.matchIndex[peer]
-				next = self.nextIndex[peer]
-				mtab = '\t'*(match+1)
-				ntab = '\t'*(next - match)
-				peerStatus += mtab + ' *' + ntab + ' ^\n'
+			if loglen <=10:
+				for peer in self.peers:
+					peerStatus += 'Node ' + peer + ':'
+					match = self.matchIndex[peer]
+					next = self.nextIndex[peer]
+					mtab = '\t'*(match+1)
+					ntab = '\t'*(next - match)
+					peerStatus += mtab + ' *' + ntab + ' ^\n'
+			else:
+				for peer in self.peers:
+					peerStatus += 'Node ' + peer + ':'
+					match = self.matchIndex[peer]
+					next = self.nextIndex[peer]
+					mtab = '\t'*(match+1-(loglen-10))
+					ntab = '\t'*(next - match)
+					peerStatus += mtab + ' *' + ntab + ' ^\n'
 
 		status = (node + term + commitIndex + electionState+  
 				 log_contents + peerStatusHeader + header1 + peerStatus)

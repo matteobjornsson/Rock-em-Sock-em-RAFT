@@ -6,7 +6,7 @@ class Heartbeat:
 
     def __init__(self, duration: float, target):
         self.target = target
-        self.duration = duration/3
+        self.duration = duration/2
         self.running = True
         self.restart = False
         self.stop = True

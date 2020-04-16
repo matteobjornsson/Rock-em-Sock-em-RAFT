@@ -39,7 +39,7 @@ class Robot:
         self.messenger = Messenger(self._id, self)
         self.ui = ui
 
-    def handle_incoming_message(self, msg:dict):
+    def handle_incoming_message(self, msg: dict):
         """
         Method that needs to be implemented for Messenger class.
         Performs the following actions when a message is pulled from the queue.
