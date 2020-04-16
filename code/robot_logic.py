@@ -55,10 +55,10 @@ class Robot:
 
     def set_running_game(self):
         if self.game_state == 'won':
-            print("Congratulations! You knocked your opponents' head off!")
+            print("Congratulations! You knocked your opponents' head off!\n" + winMessage)
             self.ui.running_game = False
         elif self.game_state == 'lost':
-            print('Oops, looks like your head got knocked off. ')
+            print('Oops, looks like your head got knocked off. \n'+ loseMessage)
             self.ui.running_game = False
         elif self.game_state == 'exit':
             print("Your opponent forfeited, you win!")
@@ -171,6 +171,53 @@ class Robot:
         msg_dictionary = {'_id': self._id, 'state': self.action_state}
         self.messenger.send(msg_dictionary, "leader")
 
+winMessage = ''' 
+
+
+ /$$     /$$ /$$$$$$  /$$   /$$
+|  $$   /$$//$$__  $$| $$  | $$
+ \  $$ /$$/| $$  \ $$| $$  | $$
+  \  $$$$/ | $$  | $$| $$  | $$
+   \  $$/  | $$  | $$| $$  | $$
+    | $$   | $$  | $$| $$  | $$
+    | $$   |  $$$$$$/|  $$$$$$/
+    |__/    \______/  \______/ 
+                               
+ /$$      /$$ /$$$$$$ /$$   /$$
+| $$  /$ | $$|_  $$_/| $$$ | $$
+| $$ /$$$| $$  | $$  | $$$$| $$
+| $$/$$ $$ $$  | $$  | $$ $$ $$
+| $$$$_  $$$$  | $$  | $$  $$$$
+| $$$/ \  $$$  | $$  | $$\  $$$
+| $$/   \  $$ /$$$$$$| $$ \  $$
+|__/     \__/|______/|__/  \__/
+                               
+
+'''
+loseMessage = '''
+
+
+ __      __   ______   __    __        
+|  \    /  \ /      \ |  \  |  \       
+ \$$\  /  $$|  $$$$$$\| $$  | $$       
+  \$$\/  $$ | $$  | $$| $$  | $$       
+   \$$  $$  | $$  | $$| $$  | $$       
+    \$$$$   | $$  | $$| $$  | $$       
+    | $$    | $$__/ $$| $$__/ $$       
+    | $$     \$$    $$ \$$    $$       
+     \$$      \$$$$$$   \$$$$$$                                  
+ __        ______    ______   ________ 
+|  \      /      \  /      \ |        \
+| $$     |  $$$$$$\|  $$$$$$\| $$$$$$$$
+| $$     | $$  | $$| $$___\$$| $$__    
+| $$     | $$  | $$ \$$    \ | $$  \   
+| $$     | $$  | $$ _\$$$$$$\| $$$$$   
+| $$_____| $$__/ $$|  \__| $$| $$_____ 
+| $$     \\$$    $$ \$$    $$| $$     \
+ \$$$$$$$$ \$$$$$$   \$$$$$$  \$$$$$$$$                               
+
+
+'''
 
 if __name__ == '__main__':
     robot_blue = Robot('blue')
