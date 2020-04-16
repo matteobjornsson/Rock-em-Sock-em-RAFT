@@ -24,17 +24,21 @@ class UI:
             if user_choice.upper() == 'Q':
                 try:
                     self.robot.punch_with_left()
+                    print('You punched left')
                 except RobotBlockedError:
                     print("robot cannot punch right now")
             elif user_choice.upper() == 'W':
                 try:
                     self.robot.punch_with_right()
+                    print('You punched right')
                 except RobotBlockedError:
                     print("robot cannot punch right now")
             elif user_choice.upper() == 'A':
                 self.robot.block_with_left()
+                print("Blocked with left")
             elif user_choice.upper() == 'S':
                 self.robot.block_with_right()
+                print("Blocked with right")
             elif user_choice == '0':
                 self.robot.stop_game()
                 self.running_game = False
