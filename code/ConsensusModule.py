@@ -522,8 +522,8 @@ class ConsensusModule:
 
 		
 		loglen = len(self.log)
-		display_width = 7
-		log_height = 5
+		display_width = 14
+		log_height = 10
 		log_contents = ''
 		if self.election_state != 'leader':
 			log_contents += f'\nLog Contents: (Most Recent {log_height:d} Logs)\nIndex\tTerm\tCommand\n'
