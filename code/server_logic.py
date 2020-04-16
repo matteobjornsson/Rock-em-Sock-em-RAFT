@@ -19,7 +19,7 @@ class Server:
         self.messenger = Messenger(id='leader', target=self, run=False)
         self.game_state = ''
         self.log = ''
-        self.cm = ConsensusModule(id=self.id, peer_count=3, server=self)  # ConsensusModule() set to "leader" for testing purposes
+        self.cm = ConsensusModule(id=self.id, peer_count=5, server=self)  # ConsensusModule() set to "leader" for testing purposes
         self.server_logic = ServerLogic(self.cm)
         self.lastApplied = 0
 
