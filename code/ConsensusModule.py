@@ -181,7 +181,7 @@ class ConsensusModule:
 		self.server = server
 		self.peers = [str(x) for x in range(0, peer_count) if x != int(self.id)]
 		self.election_state = 'follower'
-		self.timer_length = 2
+		self.timer_length = .5
 		self.vote_count = 0
 		self.reply_status = {}
 
@@ -522,8 +522,8 @@ class ConsensusModule:
 
 		
 		loglen = len(self.log)
-		display_width = 14
-		log_height = 10
+		display_width = 13
+		log_height = 7
 		log_contents = ''
 		if self.election_state != 'leader':
 			log_contents += f'\nLog Contents: (Most Recent {log_height:d} Logs)\nIndex\tTerm\tCommand\n'
