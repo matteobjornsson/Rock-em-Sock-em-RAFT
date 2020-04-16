@@ -259,7 +259,7 @@ class ConsensusModule:
 				if not entries_string:
 					entries_string = 'heartbeat'
 				heartbeat = self.make_message('heartbeat', entries=entries_string, destination=peer)
-				print('Append entries: ', heartbeat)
+				#print('Append entries: ', heartbeat)
 				self.messenger.send(heartbeat, peer)
 
 	def handle_incoming_message(self, message: dict):
@@ -522,46 +522,70 @@ class ConsensusModule:
 
 		
 		loglen = len(self.log)
-		# log = 'log:'
-		# for logEntry in self.log.log:
-		# 	log += '\t' + '.' + str(logEntry.term)  + '.'
-		# log += '\n'
-
+		display_width = 7
+		log_height = 5
 		log_contents = ''
 		if self.election_state != 'leader':
-			log_contents += '\nLog Contents:\nIndex\tTerm\tCommand\n'
-			for x in range(0, loglen):
-				log_contents += str(x) +'\t' + str(self.log.get_entry(x)) + '\n'
+			log_contents += f'\nLog Contents: (Most Recent {log_height:d} Logs)\nIndex\tTerm\tCommand\n'
+			if loglen <= log_height:
+				for x in range(0, loglen):
+					log_contents += str(x) +'\t' + str(self.log.get_entry(x)) + '\n'
+			else:
+				for x in range(loglen-log_height, loglen):
+					log_contents += str(x) +'\t' + str(self.log.get_entry(x)) + '\n'
 
 		header1 = ''
+		header2 = ''
 		peerStatusHeader = ''
 		peerStatus = ''
+		peerStatus2 = ''
 		if self.election_state == 'leader':
-			header1 = '----------' + '--------'*loglen+'\n'+"Index: "
-			for x in range(0, loglen + 1): #len(self.log.log)
-				header1 += '\t ' + str(x)
-			header1 += '\n' + '----------' + '--------'*loglen+'\n'
+			level1 = False
+			level2 = False
+			for peer in self.peers:
+				if self.matchIndex[peer]<= display_width-1:
+					level1 = True
+				else: 
+					level2 = True
+			if level1:
+				header1 = '----------' + '--------'*display_width +'\n'+"Index: "
+				for x in range(0, display_width + 1): 
+					header1 += '\t ' + str(x)
+				header1 += '\n' + '----------' + '--------'*display_width+'\n'
+			if level2:
+				#if loglen > display_width:
+				header2 = '----------' + '--------'*display_width +'\n'+"Index: "
+				for x in range(display_width, 2*display_width+1): 
+					header2 += '\t ' + str(x)
+				header2 += '\n' + '----------' + '--------'*display_width+'\n'
 			
 			peerStatusHeader = '\nFollower Match * and Next ^ Indices:\n'
-			if loglen <=10:
-				for peer in self.peers:
+
+			for peer in self.peers:
+				match = self.matchIndex[peer]
+				next = self.nextIndex[peer]
+				if match <= display_width-1:
 					peerStatus += 'Node ' + peer + ':'
-					match = self.matchIndex[peer]
-					next = self.nextIndex[peer]
 					mtab = '\t'*(match+1)
-					ntab = '\t'*(next - match)
-					peerStatus += mtab + ' *' + ntab + ' ^\n'
-			else:
-				for peer in self.peers:
-					peerStatus += 'Node ' + peer + ':'
-					match = self.matchIndex[peer]
-					next = self.nextIndex[peer]
-					mtab = '\t'*(match+1-(loglen-10))
-					ntab = '\t'*(next - match)
-					peerStatus += mtab + ' *' + ntab + ' ^\n'
+					ntab=''
+					ntab2=''
+					rtrn=''
+					if next <= display_width:
+						ntab = '\t'*(next - match) + ' ^\n'
+					else:
+						rtrn += '\n'
+						peerStatus2+= 'Node ' + peer + ':'
+						ntab2 = '\t'*(next+1 - display_width) + ' ^\n'
+						peerStatus2 += ntab2
+					peerStatus += mtab + ' *' + rtrn  + ntab 
+				else:
+					peerStatus2 += 'Node ' + peer + ':'
+					mtab = '\t'*(match+1 - display_width)
+					ntab = '\t'*(next - match) + ' ^\n'
+					peerStatus2 += mtab + ' *' + ntab 
 
 		status = (node + term + commitIndex + electionState+  
-				 log_contents + peerStatusHeader + header1 + peerStatus)
+				 log_contents + peerStatusHeader + header1 + peerStatus + header2 + peerStatus2)
 		
 		file = open(f"../files/status{self.id}.txt", 'w')
 		file.write(status)
