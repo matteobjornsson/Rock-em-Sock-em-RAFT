@@ -526,7 +526,10 @@ class ConsensusModule:
 		log_height = 9
 		log_contents = ''
 		if self.election_state != 'leader':
-			log_contents += f'\nLog Contents: (Most Recent {log_height:d} Logs)\nIndex\tTerm\tCommand\n'
+			log_contents += f'\nLog Contents: (Most Recent {log_height:d} Logs)\n'
+			log_contents += '--------'*8 +'\n'
+			log_contents += "\nIndex\tTerm\tCommand\n"
+			log_contents += '--------'*8 +'\n'
 			if loglen <= log_height:
 				for x in range(0, loglen):
 					log_contents += str(x) +'\t' + str(self.log.get_entry(x)) + '\n'
