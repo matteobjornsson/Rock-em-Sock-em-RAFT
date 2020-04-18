@@ -52,6 +52,6 @@ class Heartbeat:
                     self.restart = True
                     break
                 else:
-                    if count > 50000:  
+                    if count > 10000:  
                         print('Heartbeat Timer: ', self.duration-elapsed_time)  
                         count = 0
