@@ -44,7 +44,7 @@ class Server:
                 command = self.cm.get_command(self.lastApplied)
                 self.update_status(command)
                 self.check_game_status()
-            if print_count > 25:
+            if print_count > 5:
                 self.cm.simulation_print()
                 print_count = 0
             sleep(0.05)
