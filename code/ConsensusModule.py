@@ -84,8 +84,8 @@ class Log:
 			#print(self.log[idx])
 			return self.log[idx]
 		except IndexError:
-			print(f"There is no entry at index {idx:d} in the log.")
-
+			#print(f"There is no entry at index {idx:d} in the log.")
+			pass
 	def idx_exist(self, idx):
 		try:
 			id = self.log[idx]
@@ -223,7 +223,7 @@ class ConsensusModule:
 	def reset_next_and_match(self):
 			#print("lenght of log: ", len(self.log))
 			self.nextIndex = dict.fromkeys(self.peers, len(self.log))
-			print('nextIndex initialized to length of current log :', self.nextIndex)
+			#print('nextIndex initialized to length of current log :', self.nextIndex)
 			self.matchIndex = dict.fromkeys(self.peers, 0)
 
 	def start_election(self):  # this is equivalent to "set_candidate()"
@@ -268,10 +268,10 @@ class ConsensusModule:
 		if (incoming_term > self.term):
 			self.set_follower(incoming_term)
 			#print(self.id, ' greater term detected, setting state to follower.')
-		print(
-			'\n**** Message Received: {}\n'.format(message), " self term: ", 
-			self.term, " self state: ", self.election_state
-			)
+		# print(
+		# 	'\n**** Message Received: {}\n'.format(message), " self term: ", 
+		# 	self.term, " self state: ", self.election_state
+		# 	)
 		if message_type == 'AppendEntriesRPC':
 			self.receive_append_entry_request(message)
 		elif message_type == 'AppendReply':
@@ -327,12 +327,12 @@ class ConsensusModule:
 	def process_AppendRPC(self, entries: list, leaderCommit: int, prevLogIndex: int,
 								prevLogTerm: int, prevLogCommand: str)-> (bool, int):
 		# if logs are inconsistent or out of term, reply false
-		if (not self.log.idx_exist(prevLogIndex) ):
-			print("no log entry at prev log index")
-		elif (self.log.get_entry(prevLogIndex).term != prevLogTerm):
-			print("previous log entry not same term as incoming")
-		elif (self.log.get_entry(prevLogIndex).command != prevLogCommand):
-			print("command at prev log index does not match incoming")
+		# if (not self.log.idx_exist(prevLogIndex) ):
+		# 	print("no log entry at prev log index")
+		# elif (self.log.get_entry(prevLogIndex).term != prevLogTerm):
+		# 	print("previous log entry not same term as incoming")
+		# elif (self.log.get_entry(prevLogIndex).command != prevLogCommand):
+		# 	print("command at prev log index does not match incoming")
 
 		#reply false if log doesn’t contain an entry at prevLogIndex whose 
 		# term matches prevLogTerm (§5.3)
@@ -386,13 +386,13 @@ class ConsensusModule:
 			#############################
 			N = self.commitIndex + 1
 			if self.log.idx_exist(N): # if an entry exists to commit
-				print('log entry to be committed exists')
+				# print('log entry to be committed exists')
 				# collect the number of peers that have replicated entry N
 				match_count = 0
 				for peer in self.peers: 
 					if self.matchIndex[peer] >= N:
 						match_count += 1 
-				print("match count: ", match_count, " log term: ", self.log.get_entry(N).term)
+				#print("match count: ", match_count, " log term: ", self.log.get_entry(N).term)
 				# If there exists an N such that N > commitIndex, a majority of 
 				# matchIndex[i] ≥ N, and log[N].term == currentTerm:
 				# set commitIndex = N (§5.3, §5.4).
@@ -400,7 +400,7 @@ class ConsensusModule:
 						and match_count + 1 > math.floor(len(self.peers) / 2)):
 					# if that entry is the correct term, and if a majority of 
 					# servers have replicated that entry, commit that entry. 
-					print("increment commit index")
+					#print("increment commit index")
 					self.commitIndex = N
 
 		#print('\n', self.id, ' received append entries reply :', message)
@@ -464,7 +464,7 @@ class ConsensusModule:
 		'''
 		if message_type == 'heartbeat':
 			prevLogIndex = self.nextIndex[destination]-1
-			print("make heartbeat. NextIndex: ", self.nextIndex[destination])
+			#print("make heartbeat. NextIndex: ", self.nextIndex[destination])
 			prevLog = self.log.get_entry(prevLogIndex)
 			message = {
 				'messageType': 	'AppendEntriesRPC',
