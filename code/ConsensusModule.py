@@ -181,7 +181,7 @@ class ConsensusModule:
 		self.server = server
 		self.peers = [str(x) for x in range(0, peer_count) if x != int(self.id)]
 		self.election_state = 'follower'
-		self.timer_length = 1
+		self.timer_length = 4
 		self.vote_count = 0
 		self.reply_status = {}
 
@@ -292,6 +292,7 @@ class ConsensusModule:
 		new entry). 
 		
 		more details to follow later'''
+		self.election_timer.duration = self.timer_length/4
 		leader = message['leaderID']
 		incoming_term = int(message['term'])
 		#print("****HEREHEREHRER ***", message['entries'])
