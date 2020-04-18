@@ -28,7 +28,7 @@ class Election_Timer:
         self.stop = False
 
     def new_timeout(self) -> float:
-        return (self.duration + 4*self.duration * random.random())
+        return (self.duration + 2*self.duration * random.random())
 
     def run(self):
         # randomize timeouts to avoid conflicting elections
@@ -46,12 +46,11 @@ class Election_Timer:
 
                 elapsed_time = clock() - start
                 if elapsed_time > timeout:
-                    print('Countodwn elapsed ', timeout, ',', self.target.id, ' Starting Election       ')
+                    print('\nCountodwn elapsed ', timeout, ',', self.target.id, ' Starting Election       \n')
                     self.target.start_election()
                     self.restart_timer()
                     break
                 else:
-                    #if count > 100000: 
-                    pass
-                    #print('Election Timer: ', timeout-elapsed_time)  
-                        #count =0
+                    if count > 100000: 
+                        print('Election Timer: ', timeout-elapsed_time)  
+                        count =0

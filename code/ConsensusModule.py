@@ -181,7 +181,7 @@ class ConsensusModule:
 		self.server = server
 		self.peers = [str(x) for x in range(0, peer_count) if x != int(self.id)]
 		self.election_state = 'follower'
-		self.timer_length = .5
+		self.timer_length = 1
 		self.vote_count = 0
 		self.reply_status = {}
 
