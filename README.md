@@ -50,7 +50,7 @@ python3 server_logic.py 0
 ```
 Each RAFT instance is started by running the `server_logic.py` file with the node ID as a command line argument. If the AWS credentials are set up correctly and the queue URLs are correct, the cluster will start communicating and establishing leadership right away. 
 
-## Running the Player UI**
+## Running the Player UI
 
 ```bash
 python3 robotUI.py red
