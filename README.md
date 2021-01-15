@@ -6,7 +6,7 @@ You may be familiar with the game where the [red robot hits the blue robot](http
 Suppose you have a two player game where each player connects to a central game server. If that server were to crash, the game would fail as well. RAFT is an algorithm that allows for a set of replicated servers to provide game state seamlessly and consistently despite failures. From the perspective of the players, the experience is no different from talking to a single server, yet the server cluster can seamlessly recover from server failure with no loss of information or inconsistent data. 
 
 ## RAFT
----
+
 RAFT is most accurately described as a consensus algorithm. This relates to many systems because any set of nodes that intend to serve as a fault-tolerant cluster of replicated data must agree on that data---even if nodes fail or messages between nodes are lost. 
 
 For the in-depth explanation of RAFT, check out the original paper [here](https://raft.github.io/raft.pdf). This project represents a working implementation of the algorithm described in detail in that paper. 
@@ -19,7 +19,7 @@ This implementation of raft uses cluster nodes as illustrated in the above video
 
 
 ## Setup and Dependencies
----
+
 This code depends on the Amazon [AWS SDK for Python (Boto 3)](https://aws.amazon.com/sdk-for-python/)
 ```bash
 pip install boto3
@@ -42,15 +42,15 @@ The urls for those queues are hardcoded in `Messenger.py`. Note that these files
 
 ![sqs urls](img/message_queues.png)
 
-**Running the RAFT Cluster**
----
+## Running the RAFT Cluster
+
 ```bash
 python3 server_logic.py 0
 ```
 Each RAFT instance is started by running the `server_logic.py` file with the node ID as a command line argument. If the AWS credentials are set up correctly and the queue URLs are correct, the cluster will start communicating and establishing leadership right away. 
 
-**Running the Player UI**
----
+## Running the Player UI**
+
 ```bash
 python3 robotUI.py red
 ```
@@ -70,6 +70,6 @@ If you were to run 5 nodes, the red and blue player UI, and watch the status fil
 
 ![full demo](img/simpleDemo.gif)
 
-**Video**
----
+## Video
+
 [Here](https://www.youtube.com/watch?v=VBcIQC6Ze3M) is a video walking through the project. 
