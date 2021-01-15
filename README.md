@@ -42,12 +42,34 @@ The urls for those queues are hardcoded in `Messenger.py`. Note that these files
 
 ![sqs urls](img/message_queues.png)
 
-**Running the Network**
+**Running the RAFT Cluster**
 ---
 ```bash
-python3 Node.py 0
+python3 server_logic.py 0
 ```
-Each instance is started by running the `Node.py` file with the node ID as a command line argument. If the AWS credentials are set up correctly and the queue URLs are correct, the network will wait for incoming transactions. 
+Each RAFT instance is started by running the `server_logic.py` file with the node ID as a command line argument. If the AWS credentials are set up correctly and the queue URLs are correct, the cluster will start communicating and establishing leadership right away. 
+
+**Running the Player UI**
+---
+```bash
+python3 robotUI.py red
+```
+```bash
+python3 robotUI.py blue
+```
+The player interfaces can be started up by the above commands. The program allows for punches and blocks to be entered by the player. These actions are communicated to the Raft Cluster and the game state updated accordingly. A player receives feedback on the success or failure of their actions. They are not informed if a player punches them on an unblocked side and misses. Player action state persists until a new action is chosen. A player cannot punch too fast or they will be required to wait. 
+
+If a player punches the oponent on a side they are not blocking then there is a 10% chance they win. 
+
+```bash
+watch cat status0.txt
+```
+The status of each RAFT node is continually printed to file in `status#.txt` for a human readable status of the node. This status looks different if a node is a leader or a follower. The `logOutput#.txt` store the historical game state and is used to establish consensus. 
+
+If you were to run 5 nodes, the red and blue player UI, and watch the status files of all 5 nodes, your screen might look something like this:
+
 ![full demo](img/simpleDemo.gif)
 
+**Video**
+---
 [Here](https://www.youtube.com/watch?v=VBcIQC6Ze3M) is a video walking through the project. 
