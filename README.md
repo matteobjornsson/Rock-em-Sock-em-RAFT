@@ -14,6 +14,7 @@ For the in-depth explanation of RAFT, check out the original paper [here](https:
 For a crash course in the RAFT algorithm, check out the conference presentation below: 
 
 [![Conference presentation](img/crash_course.png)](https://youtu.be/no5Im1daS-o?t=1)
+https://youtu.be/no5Im1daS-o?t=1
 
 This implementation of raft uses cluster nodes as illustrated in the above video. However, any number (preferrably >= 3) can be used. An odd number of nodes helps prevent excessive leadership elections. 
 
