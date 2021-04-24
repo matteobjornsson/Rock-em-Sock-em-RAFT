@@ -68,7 +68,7 @@ watch cat status0.txt
 ```
 The status of each RAFT node is continually printed to file in `status#.txt` for a human readable status of the node. This status looks different if a node is a leader or a follower. The `logOutput#.txt` store the historical game state and is used to establish consensus. 
 
-If you were to run 5 nodes, the red and blue player UI, and watch the status files of all 5 nodes, your screen might look something like this:
+If you were to run 5 nodes, the red and blue player UI, and watch the status files of all 5 nodes, your screen might look something like this (using [Tmux](https://github.com/tmux/tmux/wiki) for the console windows you see):
 
 ![full demo](img/simpleDemo.gif)
 
